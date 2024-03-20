@@ -1,0 +1,5 @@
+linux:amd64:linux:x86_64
+linux:arm:linux:armv7l
+linux:arm64:linux:aarch64
+darwin:amd64:darwin:x86_64
+darwin:arm64:darwin:arm64

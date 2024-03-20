@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -e
+
+lint
+"$GX_ROOT/bin/test"
+build
+
+while IFS=':' read -r GOOS GOARCH UNAMES UNAMER
+do
+    echo "Building $GOOS/$GOARCH"
+    export GOOS GOARCH
+    go build -ldflags="-s -w" -o "build/gx-$UNAMES-$UNAMER" .
+done < etc/platforms
