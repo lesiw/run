@@ -18,7 +18,7 @@ go install lesiw.io/gx@latest
 
 ## Configuration
 
-* `GX_PATH`: Defaults to `./bin`. Set to `-` to disable.
+* `GXPATH`: Defaults to `./bin`. Set to `-` to disable.
 
 ## Completion
 

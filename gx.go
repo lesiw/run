@@ -88,7 +88,7 @@ func setupPath() error {
 }
 
 func gxPath() string {
-	paths := os.Getenv("GX_PATH")
+	paths := os.Getenv("GXPATH")
 	if paths == "" {
 		paths = "./bin"
 	} else if paths == "-" {
