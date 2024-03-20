@@ -37,9 +37,6 @@ func run() (err error) {
 	} else if *install {
 		return installCompletion()
 	}
-	if err = os.Setenv("GX_ROOT", root); err != nil {
-		return fmt.Errorf("could not set GX_ROOT: %s", err)
-	}
 	if err = setupPath(); err != nil {
 		return err
 	}
