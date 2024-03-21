@@ -1,3 +1,5 @@
 #!/bin/sh
 
+gx lint
+gx test
 go install ./...
