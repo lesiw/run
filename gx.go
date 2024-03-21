@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -56,9 +57,6 @@ func run() (err error) {
 	} else if *install {
 		return installCompletion()
 	}
-	if err = setupPath(); err != nil {
-		return err
-	}
 	if flag.NArg() < 1 {
 		return fmt.Errorf("no command given")
 	}
@@ -67,7 +65,11 @@ func run() (err error) {
 	if flag.NArg() > 1 {
 		args = flag.Args()[1:]
 	}
-	cmd := exec.Command(name, args...)
+	cmdpath, err := findExecutable(name)
+	if err != nil {
+		return fmt.Errorf("error running command: %s", err)
+	}
+	cmd := exec.Command(cmdpath, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -94,16 +96,18 @@ func changeToGitRoot() error {
 	}
 }
 
-func setupPath() error {
+func findExecutable(name string) (string, error) {
+	oldpath := os.Getenv("PATH")
+	defer func() { _ = os.Setenv("PATH", oldpath) }()
+
 	gxPath := gxPath()
-	if gxPath == "" {
-		return nil
+	if gxPath != "" {
+		path := gxPath + string(filepath.ListSeparator) + os.Getenv("PATH")
+		if err := os.Setenv("PATH", path); err != nil {
+			return "", fmt.Errorf("could not set PATH: %s", err)
+		}
 	}
-	path := gxPath + string(filepath.ListSeparator) + os.Getenv("PATH")
-	if err := os.Setenv("PATH", path); err != nil {
-		return fmt.Errorf("could not set PATH: %s", err)
-	}
-	return nil
+	return exec.LookPath(name)
 }
 
 func gxPath() string {
@@ -131,26 +135,39 @@ func gxPath() string {
 }
 
 func listCommands() error {
+	paths, err := cmdPaths()
+	if err != nil {
+		return err
+	}
+	for _, path := range paths {
+		fmt.Println(filepath.Base(path))
+	}
+	return nil
+}
+
+func cmdPaths() (cmds []string, err error) {
 	paths := gxPath()
+	var files []fs.DirEntry
+	var info os.FileInfo
 	for _, path := range filepath.SplitList(paths) {
-		files, err := os.ReadDir(path)
+		files, err = os.ReadDir(path)
 		if err != nil {
-			return fmt.Errorf("error reading directory: %s", err)
+			return nil, fmt.Errorf("error reading directory: %s", err)
 		}
 		for _, file := range files {
 			if file.IsDir() {
 				continue
 			}
-			info, err := file.Info()
+			info, err = file.Info()
 			if err != nil {
-				return err
+				return
 			}
 			if info.Mode()&0111 != 0 {
-				fmt.Println(file.Name())
+				cmds = append(cmds, filepath.Join(path, file.Name()))
 			}
 		}
 	}
-	return nil
+	return
 }
 
 func chownFiles(mappings stringlist) error {
