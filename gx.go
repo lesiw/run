@@ -37,6 +37,10 @@ func run() (err error) {
 	install := flag.Bool("i", false, "install completion scripts")
 	printversion := flag.Bool("v", false, "print version")
 	flag.Parse()
+	if *printversion {
+		fmt.Print(version)
+		return nil
+	}
 
 	if err = changeToGitRoot(); err != nil {
 		return fmt.Errorf("could not find git root: %s", err)
@@ -44,10 +48,7 @@ func run() (err error) {
 	if root, err = os.Getwd(); err != nil {
 		return fmt.Errorf("could not get current working directory: %s", err)
 	}
-	if *printversion {
-		fmt.Print(version)
-		return nil
-	} else if *list {
+	if *list {
 		return listCommands()
 	} else if *printroot {
 		fmt.Println(root)
