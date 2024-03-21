@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -e
+
+ver=$("$(curl -L lesiw.io/bump | sh)" -s 1 < version.txt)
+echo "$ver" > version.txt
+
+git add version.txt
+git commit -m "$ver"
+git tag "$ver"
+git push
+git push --tags
