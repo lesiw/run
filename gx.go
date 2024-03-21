@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"flag"
 	"fmt"
 	"os"
@@ -11,6 +12,9 @@ import (
 )
 
 var root string
+
+//go:embed version.txt
+var version string
 
 func main() {
 	if err := run(); err != nil {
@@ -30,6 +34,7 @@ func run() (err error) {
 	list := flag.Bool("l", false, "list all commands")
 	printroot := flag.Bool("r", false, "print git root")
 	install := flag.Bool("i", false, "install completion scripts")
+	printversion := flag.Bool("v", false, "print version")
 	flag.Parse()
 
 	if err = changeToGitRoot(); err != nil {
@@ -38,7 +43,10 @@ func run() (err error) {
 	if root, err = os.Getwd(); err != nil {
 		return fmt.Errorf("could not get current working directory: %s", err)
 	}
-	if *list {
+	if *printversion {
+		fmt.Print(version)
+		return nil
+	} else if *list {
 		return listCommands()
 	} else if *printroot {
 		fmt.Println(root)

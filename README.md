@@ -28,6 +28,7 @@ Usage of gx:
   -r    print git root
   -u mapping
         chowns files based on a given mapping uid:gid::uid:gid
+  -v    print version
 ```
 
 ## Configuration
