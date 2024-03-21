@@ -11,23 +11,22 @@ do
         --platform="$arch" \
         --build-arg="ARCH=$arch" \
         --tag="$IMAGE_NAME:$arch" \
+        --no-cache \
         .
     docker push "$IMAGE_NAME:$arch"
 done
 
-manifest() {
-    cmd="docker manifest create"
-    cmd="$cmd ${1:-}"
-    cmd="$cmd $IMAGE_NAME:latest"
-    for arch in $archlist
-    do
-        cmd="$cmd $IMAGE_NAME:$arch"
-    done
-    eval "$cmd"
-    docker manifest push "$IMAGE_NAME:latest"
-}
-
-if ! manifest
+if docker manifest inspect "$IMAGE_NAME:latest" >/dev/null 2>&1
 then
-    manifest "--amend"
+    docker manifest rm "$IMAGE_NAME:latest"
 fi
+
+manifestcmd="docker manifest create"
+manifestcmd="$manifestcmd ${1:-}"
+manifestcmd="$manifestcmd $IMAGE_NAME:latest"
+for arch in $archlist
+do
+    manifestcmd="$manifestcmd $IMAGE_NAME:$arch"
+done
+eval "$manifestcmd"
+docker manifest push "$IMAGE_NAME:latest"
