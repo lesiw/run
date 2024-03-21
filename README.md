@@ -16,6 +16,20 @@ curl -L lesiw.io/gx | sh
 go install lesiw.io/gx@latest
 ```
 
+## Usage
+
+```
+Usage of gx:
+
+    gx COMMAND [ARGS...]
+
+  -i    install completion scripts
+  -l    list all commands
+  -r    print git root
+  -u mapping
+        chowns files based on a given mapping uid:gid::uid:gid
+```
+
 ## Configuration
 
 * `GXPATH`: Defaults to `./bin`. Set to `-` to disable.
