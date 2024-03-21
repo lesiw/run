@@ -4,7 +4,8 @@ set -e
 
 gx lint
 gx test
-gx build
 
 gx release-bin
 gx release-docker
+
+find build/ -type l -exec rm -f {} \;
