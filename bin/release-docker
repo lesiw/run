@@ -1,0 +1,33 @@
+#!/bin/sh
+
+set -e
+
+IMAGE_NAME="${IMAGE_NAME:-lesiw/gx}"
+archlist="386 amd64 arm arm64"
+for arch in $archlist
+do
+    echo "building $arch"
+    docker build \
+        --platform="$arch" \
+        --build-arg="ARCH=$arch" \
+        --tag="$IMAGE_NAME:$arch" \
+        .
+    docker push "$IMAGE_NAME:$arch"
+done
+
+manifest() {
+    cmd="docker manifest create"
+    cmd="$cmd ${1:-}"
+    cmd="$cmd $IMAGE_NAME:latest"
+    for arch in $archlist
+    do
+        cmd="$cmd $IMAGE_NAME:$arch"
+    done
+    eval "$cmd"
+    docker manifest push "$IMAGE_NAME:latest"
+}
+
+if ! manifest
+then
+    manifest "--amend"
+fi

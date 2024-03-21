@@ -6,9 +6,5 @@ gx lint
 gx test
 gx build
 
-while IFS=':' read -r GOOS GOARCH UNAMES UNAMER
-do
-    echo "Building $GOOS/$GOARCH"
-    export GOOS GOARCH
-    go build -ldflags="-s -w" -o "build/gx-$UNAMES-$UNAMER" .
-done < etc/platforms
+gx release-bin
+gx release-docker
