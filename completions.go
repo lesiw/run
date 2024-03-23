@@ -39,9 +39,9 @@ func installBashCompletion() error {
 	var installPath string
 	switch runtime.GOOS {
 	case "darwin":
-		installPath = "/usr/local/share/bash-completion/completions/gx"
+		installPath = "/usr/local/share/bash-completion/completions/pb"
 	default:
-		installPath = "/usr/share/bash-completion/completions/gx"
+		installPath = "/usr/share/bash-completion/completions/pb"
 	}
 	bashChanged, err := installFile(bashCompletion, installPath)
 	if err != nil {
@@ -54,8 +54,7 @@ func installBashCompletion() error {
 }
 
 func installZshCompletion() error {
-	zshChanged, err := installFile(zshCompletion,
-		"/usr/local/share/zsh/site-functions/_gx")
+	zshChanged, err := installFile(zshCompletion, "/usr/local/share/zsh/site-functions/_pb")
 	if err != nil {
 		return fmt.Errorf("Error installing zsh completion script: %v\n", err)
 	}

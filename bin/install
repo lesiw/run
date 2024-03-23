@@ -1,5 +1,5 @@
 #!/bin/sh
 
-gx lint
-gx test
+pb lint
+pb test
 go install ./...

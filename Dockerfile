@@ -1,4 +1,4 @@
 FROM scratch
 ARG ARCH
-COPY build/gx-linux-${ARCH} /gx
-ENTRYPOINT ["/gx"]
+COPY build/pb-linux-${ARCH} /pb
+ENTRYPOINT ["/pb"]

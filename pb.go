@@ -26,8 +26,8 @@ func main() {
 
 func run() (err error) {
 	flag.Usage = func() {
-		fmt.Fprint(flag.CommandLine.Output(), "Usage of gx:\n\n")
-		fmt.Fprint(flag.CommandLine.Output(), "    gx COMMAND [ARGS...]\n\n")
+		fmt.Fprint(flag.CommandLine.Output(), "Usage of pb:\n\n")
+		fmt.Fprint(flag.CommandLine.Output(), "    pb COMMAND [ARGS...]\n\n")
 		flag.PrintDefaults()
 	}
 	var usermap stringlist
@@ -101,9 +101,9 @@ func findExecutable(name string) (string, error) {
 	oldpath := os.Getenv("PATH")
 	defer func() { _ = os.Setenv("PATH", oldpath) }()
 
-	gxPath := gxPath()
-	if gxPath != "" {
-		path := gxPath + string(filepath.ListSeparator) + os.Getenv("PATH")
+	pbPath := pbPath()
+	if pbPath != "" {
+		path := pbPath + string(filepath.ListSeparator) + os.Getenv("PATH")
 		if err := os.Setenv("PATH", path); err != nil {
 			return "", fmt.Errorf("could not set PATH: %s", err)
 		}
@@ -111,8 +111,8 @@ func findExecutable(name string) (string, error) {
 	return exec.LookPath(name)
 }
 
-func gxPath() string {
-	paths := os.Getenv("GXPATH")
+func pbPath() string {
+	paths := os.Getenv("PBPATH")
 	if paths == "" {
 		paths = "./bin"
 	} else if paths == "-" {
@@ -147,7 +147,7 @@ func listCommands() error {
 }
 
 func cmdPaths() (cmds []string, err error) {
-	paths := gxPath()
+	paths := pbPath()
 	var files []fs.DirEntry
 	var info os.FileInfo
 	for _, path := range filepath.SplitList(paths) {

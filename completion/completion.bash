@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-__gx_completion () {
+__pb_completion () {
     case "${COMP_WORDS[COMP_CWORD]}" in
         -*) suggestions="-i -r -l"
             ;;
         *)
-            suggestions="$(gx -l)"
+            suggestions="$(pb -l)"
             ;;
     esac
     [ -z "$suggestions" ] && return 0
@@ -16,4 +16,4 @@ __gx_completion () {
     done < <(compgen -W "$suggestions" -- "${COMP_WORDS[COMP_CWORD]}")
 }
 
-complete -F __gx_completion gx
+complete -F __pb_completion pb

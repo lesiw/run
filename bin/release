@@ -2,10 +2,10 @@
 
 set -e
 
-gx lint
-gx test
+pb lint
+pb test
 
-gx release-bin
-gx release-docker
+pb release-bin
+pb release-docker
 
 find build/ -type l -exec rm -f {} \;

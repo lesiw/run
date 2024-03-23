@@ -1,9 +1,9 @@
-#compdef gx
+#compdef pb
 
-_gx_tasks() {
+_pb_tasks() {
     local -a tasks
     IFS=$'\n'
-    tasks=($(gx -l 2>/dev/null))
+    tasks=($(pb -l 2>/dev/null))
     _describe 'tasks' tasks
 }
 
@@ -11,4 +11,4 @@ _arguments \
     '-i[Install autocomplete scripts.]' \
     '-r[Print root.]' \
     '-l[List tasks.]' \
-    '*:task:_gx_tasks'
+    '*:task:_pb_tasks'

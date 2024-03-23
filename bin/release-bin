@@ -6,10 +6,10 @@ while IFS=':' read -r GOOS GOARCH UNAMES UNAMER
 do
     echo "Building $GOOS/$GOARCH"
     export GOOS GOARCH
-    go build -ldflags="-s -w" -o "build/gx-$UNAMES-$UNAMER" .
-    if [ ! -f "build/gx-$GOOS-$GOARCH" ] || [ -L "build/gx-$GOOS-$GOARCH" ]
+    go build -ldflags="-s -w" -o "build/pb-$UNAMES-$UNAMER" .
+    if [ ! -f "build/pb-$GOOS-$GOARCH" ] || [ -L "build/pb-$GOOS-$GOARCH" ]
     then
-        rm -f "build/gx-$GOOS-$GOARCH"
-        ln -s "gx-$UNAMES-$UNAMER" "build/gx-$GOOS-$GOARCH"
+        rm -f "build/pb-$GOOS-$GOARCH"
+        ln -s "pb-$UNAMES-$UNAMER" "build/pb-$GOOS-$GOARCH"
     fi
 done < etc/platforms

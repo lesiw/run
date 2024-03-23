@@ -1,4 +1,4 @@
-# gx (git exec)
+# pb: project builder
 
 Run commands relative to the root of the git repository.
 
@@ -7,21 +7,21 @@ Run commands relative to the root of the git repository.
 ### curl
 
 ```sh
-curl -L lesiw.io/gx | sh
+curl -L lesiw.io/pb | sh
 ```
 
 ### go install
 
 ```sh
-go install lesiw.io/gx@latest
+go install lesiw.io/pb@latest
 ```
 
 ## Usage
 
 ```
-Usage of gx:
+Usage of pb:
 
-    gx COMMAND [ARGS...]
+    pb COMMAND [ARGS...]
 
   -i    install completion scripts
   -l    list all commands
@@ -33,14 +33,14 @@ Usage of gx:
 
 ## Configuration
 
-* `GXPATH`: Defaults to `./bin`. Set to `-` to disable.
+* `PBPATH`: Defaults to `./bin`. Set to `-` to disable.
 
 ## Completion
 
 Install bash/zsh completion:
 
 ```sh
-sudo "$(which gx)" -i
+sudo "$(which pb)" -i
 ```
 
 After running the command, follow the printed instructions.

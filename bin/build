@@ -1,4 +1,4 @@
 #!/bin/sh
 
 mkdir -p build
-go build -o build/gx .
+go build -o build/pb .
