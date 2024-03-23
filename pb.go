@@ -10,9 +10,12 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"lesiw.io/ctrctl"
 )
 
 var root string
+var container string
 
 //go:embed version.txt
 var version string
@@ -60,6 +63,36 @@ func run() (err error) {
 	}
 	if flag.NArg() < 1 {
 		return fmt.Errorf("no command given")
+	}
+	if os.Getenv("PBCONTAINER") != "" {
+		defer containerCleanup()
+		if err = containerSetup(); err != nil {
+			return err
+		}
+	}
+	return execCommand()
+}
+
+func execCommand() error {
+	if container != "" {
+		_, err := ctrctl.ContainerExec(
+			&ctrctl.ContainerExecOpts{
+				Cmd: &exec.Cmd{
+					Stdin:  os.Stdin,
+					Stdout: os.Stdout,
+					Stderr: os.Stderr,
+				},
+				Interactive: true,
+				Tty:         true,
+			},
+			container,
+			"pb",
+			flag.Args()...,
+		)
+		if err != nil {
+			return fmt.Errorf("containerized pb failed: %s", err)
+		}
+		return nil
 	}
 	name := flag.Args()[0]
 	var args []string

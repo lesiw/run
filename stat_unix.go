@@ -36,3 +36,18 @@ func chownDir(root string, fuid, fgid, tuid, tgid int) error {
 		return nil
 	})
 }
+
+func getOwner(path string) (uid int, gid int, err error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return
+	}
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		err = fmt.Errorf("failed to get info for %s: %s", path, err)
+		return
+	}
+	uid = int(stat.Uid)
+	gid = int(stat.Gid)
+	return
+}
