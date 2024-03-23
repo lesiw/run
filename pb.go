@@ -40,6 +40,8 @@ func run() (err error) {
 	if *printversion {
 		fmt.Print(version)
 		return nil
+	} else if *install {
+		return installCompletion()
 	}
 
 	if err = changeToGitRoot(); err != nil {
@@ -55,8 +57,6 @@ func run() (err error) {
 		return nil
 	} else if len(usermap) > 0 {
 		return chownFiles(usermap)
-	} else if *install {
-		return installCompletion()
 	}
 	if flag.NArg() < 1 {
 		return fmt.Errorf("no command given")
