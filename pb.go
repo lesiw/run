@@ -2,6 +2,7 @@ package main
 
 import (
 	_ "embed"
+	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -11,11 +12,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
 	"lesiw.io/ctrctl"
 )
 
 var root string
 var container string
+var pbid uuid.UUID
 
 //go:embed version.txt
 var versionfile string
@@ -55,6 +58,9 @@ func run() (err error) {
 	if root, err = os.Getwd(); err != nil {
 		return fmt.Errorf("could not get current working directory: %s", err)
 	}
+	if pbid, err = getPBID(); err != nil {
+		return err
+	}
 	if *list {
 		return listCommands()
 	} else if *printroot {
@@ -73,6 +79,28 @@ func run() (err error) {
 		}
 	}
 	return execCommand()
+}
+
+func getPBID() (uuid.UUID, error) {
+	pbidfile := filepath.Join(root, ".pbid")
+	uuidbytes, err := os.ReadFile(pbidfile)
+	var pe *fs.PathError
+	if err == nil {
+		uuidstring := strings.TrimSpace(string(uuidbytes))
+		u, err := uuid.Parse(uuidstring)
+		if err != nil {
+			return uuid.UUID{}, fmt.Errorf("could not parse project id: %s", err)
+		}
+		return u, nil
+	}
+	if !errors.As(err, &pe) {
+		return uuid.UUID{}, fmt.Errorf("could not read .pbid file: %s", err)
+	}
+	newUUID := uuid.New()
+	if err = os.WriteFile(pbidfile, []byte(newUUID.String()+"\n"), 0644); err != nil {
+		return uuid.UUID{}, fmt.Errorf("could not write .pbid file: %s", err)
+	}
+	return newUUID, nil
 }
 
 func execCommand() error {

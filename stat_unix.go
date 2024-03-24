@@ -51,3 +51,13 @@ func getOwner(path string) (uid int, gid int, err error) {
 	gid = int(stat.Gid)
 	return
 }
+
+func getMtime(path string) (mtime int64, err error) {
+	var info fs.FileInfo
+	info, err = os.Lstat(path)
+	if err != nil {
+		return
+	}
+	mtime = info.ModTime().Unix()
+	return
+}

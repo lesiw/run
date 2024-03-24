@@ -1,11 +1,14 @@
 package main
 
 import (
+	"crypto/sha1"
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"lesiw.io/ctrctl"
 )
@@ -25,6 +28,12 @@ func containerCleanup() {
 
 func containerSetup() error {
 	image := os.Getenv("PBCTR")
+	if len(image) > 0 && (image[0] == '/' || image[0] == '.') {
+		var err error
+		if image, err = buildContainer(image); err != nil {
+			return err
+		}
+	}
 	var err error
 	container, err = ctrctl.ContainerRun(
 		&ctrctl.ContainerRunOpts{
@@ -68,6 +77,51 @@ func containerSetup() error {
 		}
 	}
 	return nil
+}
+
+func buildContainer(path string) (image string, err error) {
+	imagehash := sha1.New()
+	imagehash.Write(pbid[:])
+	imagehash.Write([]byte(path))
+	image = fmt.Sprintf("%x", imagehash.Sum(nil))
+	ctimestr, inspectErr := ctrctl.Inspect(
+		&ctrctl.InspectOpts{Format: "{{.Created}}"},
+		image,
+	)
+	mtime, err := getMtime(path)
+	if err != nil {
+		err = fmt.Errorf("could not read Containerfile '%s': %s", path, err)
+		return
+	}
+	if inspectErr == nil {
+		var ctime time.Time
+		ctime, err = time.Parse(time.RFC3339, ctimestr)
+		if err != nil {
+			err = fmt.Errorf("could not parse container created timestamp '%s': %s",
+				ctimestr, err)
+			return
+		}
+		if ctime.Unix() > mtime {
+			return // Container is newer than Containerfile.
+		}
+	}
+	_, err = ctrctl.Build(
+		&ctrctl.BuildOpts{
+			Cmd: &exec.Cmd{
+				Stdin:  os.Stdin,
+				Stdout: os.Stdout,
+				Stderr: os.Stderr,
+			},
+			File: path,
+			Tag:  image,
+		},
+		".",
+		"",
+	)
+	if err != nil {
+		err = fmt.Errorf("error building container '%s': %s", path, err)
+	}
+	return
 }
 
 func fixFileOwners() error {

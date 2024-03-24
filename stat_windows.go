@@ -12,3 +12,7 @@ func chownDir(string, int, int, int, int) error {
 func getOwner(string) (int, int, error) {
 	return 0, 0, fmt.Errorf("getOwner is not implemented for windows")
 }
+
+func getMtime(string) (int64, error) {
+	return 0, fmt.Errorf("getMtime is not implemented for windows")
+}
