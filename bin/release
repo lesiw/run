@@ -8,4 +8,4 @@ pb test
 pb release-bin
 pb release-docker
 
-find build/ -type l -exec rm -f {} \;
+find out/ -type l -exec rm -f {} \;

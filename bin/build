@@ -1,4 +1,4 @@
 #!/bin/sh
 
 mkdir -p build
-go build -o build/pb .
+CGO_ENABLED=0 go build -o out/pb .

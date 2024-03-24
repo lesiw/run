@@ -2,14 +2,18 @@
 
 set -e
 
+export CGO_ENABLED=0
+
+mkdir -p out
+
 while IFS=':' read -r GOOS GOARCH UNAMES UNAMER
 do
     echo "Building $GOOS/$GOARCH"
     export GOOS GOARCH
-    go build -ldflags="-s -w" -o "build/pb-$UNAMES-$UNAMER" .
-    if [ ! -f "build/pb-$GOOS-$GOARCH" ] || [ -L "build/pb-$GOOS-$GOARCH" ]
+    go build -ldflags="-s -w" -o "out/pb-$UNAMES-$UNAMER" .
+    if [ ! -f "out/pb-$GOOS-$GOARCH" ] || [ -L "out/pb-$GOOS-$GOARCH" ]
     then
-        rm -f "build/pb-$GOOS-$GOARCH"
-        ln -s "pb-$UNAMES-$UNAMER" "build/pb-$GOOS-$GOARCH"
+        rm -f "out/pb-$GOOS-$GOARCH"
+        ln -s "pb-$UNAMES-$UNAMER" "out/pb-$GOOS-$GOARCH"
     fi
 done < etc/platforms
