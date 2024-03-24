@@ -39,7 +39,7 @@ func fetchPb(binos, arch string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("unrecognized container arch: %s", arch)
 	}
-	url := pbdlurl + "/releases/download/" + version + "/pb-" + urlos + "-" + urlarch
+	url := pbdlurl + "/download/" + version + "/pb-" + urlos + "-" + urlarch
 	cache, err := cacheDir()
 	if err != nil {
 		return "", err

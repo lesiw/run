@@ -18,6 +18,7 @@ var root string
 var container string
 
 //go:embed version.txt
+var versionfile string
 var version string
 
 func main() {
@@ -28,6 +29,7 @@ func main() {
 }
 
 func run() (err error) {
+	version = strings.TrimSpace(versionfile)
 	flag.Usage = func() {
 		fmt.Fprint(flag.CommandLine.Output(), "Usage of pb:\n\n")
 		fmt.Fprint(flag.CommandLine.Output(), "    pb COMMAND [ARGS...]\n\n")
@@ -41,7 +43,7 @@ func run() (err error) {
 	printversion := flag.Bool("v", false, "print version")
 	flag.Parse()
 	if *printversion {
-		fmt.Print(version)
+		fmt.Println(version)
 		return nil
 	} else if *install {
 		return installCompletion()
