@@ -1,4 +1,4 @@
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-lesiw.io/ctrctl v0.8.0 h1:aan6oFztL7755/kJ0rOa+c0qwdjj+3NFsWm+Y5uKFuY=
-lesiw.io/ctrctl v0.8.0/go.mod h1:qhIy8Yy6hV37ee8ASHtAuLL4YeIaWMtcQnA2jV+FFlQ=
+lesiw.io/ctrctl v0.9.0 h1:ypicrup4TY0K9RL2koixfwQMBKEkOHfehhnpY7ER/9s=
+lesiw.io/ctrctl v0.9.0/go.mod h1:qhIy8Yy6hV37ee8ASHtAuLL4YeIaWMtcQnA2jV+FFlQ=

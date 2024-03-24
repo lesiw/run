@@ -105,8 +105,8 @@ func buildContainer(path string) (image string, err error) {
 			return // Container is newer than Containerfile.
 		}
 	}
-	_, err = ctrctl.Build(
-		&ctrctl.BuildOpts{
+	_, err = ctrctl.ImageBuild(
+		&ctrctl.ImageBuildOpts{
 			Cmd: &exec.Cmd{
 				Stdin:  os.Stdin,
 				Stdout: os.Stdout,
@@ -116,7 +116,6 @@ func buildContainer(path string) (image string, err error) {
 			Tag:  image,
 		},
 		".",
-		"",
 	)
 	if err != nil {
 		err = fmt.Errorf("error building container '%s': %s", path, err)
