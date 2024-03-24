@@ -24,7 +24,7 @@ func containerCleanup() {
 }
 
 func containerSetup() error {
-	image := os.Getenv("PBCONTAINER")
+	image := os.Getenv("PBCTR")
 	var err error
 	container, err = ctrctl.ContainerRun(
 		&ctrctl.ContainerRunOpts{

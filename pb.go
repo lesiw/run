@@ -66,7 +66,7 @@ func run() (err error) {
 	if flag.NArg() < 1 {
 		return fmt.Errorf("no command given")
 	}
-	if os.Getenv("PBCONTAINER") != "" {
+	if os.Getenv("PBCTR") != "" {
 		defer containerCleanup()
 		if err = containerSetup(); err != nil {
 			return err
