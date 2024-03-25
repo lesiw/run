@@ -23,12 +23,13 @@ Usage of pb:
 
     pb COMMAND [ARGS...]
 
+  -V    print version
   -i    install completion scripts
   -l    list all commands
   -r    print git root
   -u mapping
-        chowns files based on a given mapping uid:gid::uid:gid
-  -v    print version
+        chowns files based on a given mapping (uid:gid::uid:gid)
+  -v    verbose
 ```
 
 ## Configuration

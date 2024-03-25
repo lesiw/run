@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"os"
-	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
@@ -107,11 +106,7 @@ func buildContainer(path string) (image string, err error) {
 	}
 	_, err = ctrctl.ImageBuild(
 		&ctrctl.ImageBuildOpts{
-			Cmd: &exec.Cmd{
-				Stdin:  os.Stdin,
-				Stdout: os.Stdout,
-				Stderr: os.Stderr,
-			},
+			Cmd:     captureCmdUnlessVerbose(),
 			File:    path,
 			NoCache: true,
 			Tag:     image,
@@ -119,6 +114,7 @@ func buildContainer(path string) (image string, err error) {
 		".",
 	)
 	if err != nil {
+		fmt.Fprint(os.Stderr, lastlog.String())
 		err = fmt.Errorf("error building container '%s': %s", path, err)
 	}
 	return

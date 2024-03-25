@@ -19,6 +19,7 @@ import (
 var root string
 var container string
 var pbid uuid.UUID
+var verbose = flag.Bool("v", false, "verbose")
 
 //go:embed version.txt
 var versionfile string
@@ -39,11 +40,11 @@ func run() (err error) {
 		flag.PrintDefaults()
 	}
 	var usermap stringlist
-	flag.Var(&usermap, "u", "chowns files based on a given `mapping` uid:gid::uid:gid ")
+	flag.Var(&usermap, "u", "chowns files based on a given `mapping` (uid:gid::uid:gid)")
 	list := flag.Bool("l", false, "list all commands")
 	printroot := flag.Bool("r", false, "print git root")
 	install := flag.Bool("i", false, "install completion scripts")
-	printversion := flag.Bool("v", false, "print version")
+	printversion := flag.Bool("V", false, "print version")
 	flag.Parse()
 	if *printversion {
 		fmt.Println(version)
