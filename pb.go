@@ -112,6 +112,7 @@ func execCommand() error {
 					Stdout: os.Stdout,
 					Stderr: os.Stderr,
 				},
+				Env:         "PBCTRID=" + container,
 				Interactive: true,
 				Tty:         true,
 			},
