@@ -108,11 +108,7 @@ func execCommand() error {
 	if container != "" {
 		_, err := ctrctl.ContainerExec(
 			&ctrctl.ContainerExecOpts{
-				Cmd: &exec.Cmd{
-					Stdin:  os.Stdin,
-					Stdout: os.Stdout,
-					Stderr: os.Stderr,
-				},
+				Cmd:         attachCmd(),
 				Env:         "PBCTRID=" + container,
 				Interactive: true,
 				Tty:         true,

@@ -21,13 +21,13 @@ var lastlog streamLogger
 
 func captureCmdUnlessVerbose() *exec.Cmd {
 	if *verbose {
-		return stdCmd()
+		return attachCmd()
 	} else {
-		return logCmd()
+		return captureCmd()
 	}
 }
 
-func stdCmd() *exec.Cmd {
+func attachCmd() *exec.Cmd {
 	return &exec.Cmd{
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
@@ -35,7 +35,7 @@ func stdCmd() *exec.Cmd {
 	}
 }
 
-func logCmd() *exec.Cmd {
+func captureCmd() *exec.Cmd {
 	lastlog.Reset()
 	if isTty() {
 		return &exec.Cmd{
