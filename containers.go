@@ -112,8 +112,9 @@ func buildContainer(path string) (image string, err error) {
 				Stdout: os.Stdout,
 				Stderr: os.Stderr,
 			},
-			File: path,
-			Tag:  image,
+			File:    path,
+			NoCache: true,
+			Tag:     image,
 		},
 		".",
 	)
