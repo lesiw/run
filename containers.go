@@ -48,7 +48,6 @@ func containerSetup() error {
 	container, err = ctrctl.ContainerRun(
 		&ctrctl.ContainerRunOpts{
 			Detach:  true,
-			Rm:      true,
 			Tty:     true,
 			Volume:  root + ":/work",
 			Workdir: "/work",
