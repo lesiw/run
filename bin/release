@@ -2,9 +2,7 @@
 
 set -e
 
-pb clean
-pb ci
-pb release-bin
+pb build
 pb release-docker
 
 find out/ -type l -exec rm -f {} \;

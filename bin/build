@@ -7,5 +7,18 @@ set -e
 pb clean
 pb ci
 
+export CGO_ENABLED=0
+
 mkdir -p out
-CGO_ENABLED=0 go build -o out/pb .
+
+while IFS=':' read -r GOOS GOARCH UNAMES UNAMER
+do
+    echo "Building $GOOS/$GOARCH"
+    export GOOS GOARCH
+    go build -ldflags="-s -w" -o "out/pb-$UNAMES-$UNAMER" .
+    if [ ! -f "out/pb-$GOOS-$GOARCH" ] || [ -L "out/pb-$GOOS-$GOARCH" ]
+    then
+        rm -f "out/pb-$GOOS-$GOARCH"
+        ln -s "pb-$UNAMES-$UNAMER" "out/pb-$GOOS-$GOARCH"
+    fi
+done < etc/platforms
