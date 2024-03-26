@@ -16,6 +16,8 @@ import (
 	"lesiw.io/ctrctl"
 )
 
+const defaultcmd = ".pbdefault"
+
 var root string
 var container string
 var pbid uuid.UUID
@@ -70,8 +72,9 @@ func run() (err error) {
 	} else if len(usermap) > 0 {
 		return chownFiles(usermap)
 	}
-	if flag.NArg() < 1 {
-		return fmt.Errorf("no command given")
+	argv := []string{defaultcmd}
+	if flag.NArg() > 0 {
+		argv = flag.Args()
 	}
 	if os.Getenv("PBCTR") != "" {
 		defer containerCleanup()
@@ -79,7 +82,7 @@ func run() (err error) {
 			return err
 		}
 	}
-	return execCommand()
+	return execCommand(argv)
 }
 
 func getPBID() (uuid.UUID, error) {
@@ -104,7 +107,7 @@ func getPBID() (uuid.UUID, error) {
 	return newUUID, nil
 }
 
-func execCommand() error {
+func execCommand(argv []string) error {
 	if container != "" {
 		_, err := ctrctl.ContainerExec(
 			&ctrctl.ContainerExecOpts{
@@ -115,21 +118,26 @@ func execCommand() error {
 			},
 			container,
 			"pb",
-			flag.Args()...,
+			argv...,
 		)
 		if err != nil {
 			return fmt.Errorf("containerized pb failed: %s", err)
 		}
 		return nil
 	}
-	name := flag.Args()[0]
+	name := argv[0]
 	var args []string
-	if flag.NArg() > 1 {
+	if len(argv) > 1 {
 		args = flag.Args()[1:]
 	}
 	cmdpath, err := findExecutable(name)
 	if err != nil {
-		return fmt.Errorf("error running command: %s", err)
+		if name == defaultcmd {
+			fmt.Fprintln(os.Stderr, "no command specified. available commands:")
+			return listCommands()
+		} else {
+			return fmt.Errorf("error running command: %s", err)
+		}
 	}
 	cmd := exec.Command(cmdpath, args...)
 	cmd.Stdin = os.Stdin
@@ -201,6 +209,10 @@ func listCommands() error {
 	if err != nil {
 		return err
 	}
+	if len(paths) < 1 {
+		fmt.Fprintln(os.Stderr, "<none>")
+		return nil
+	}
 	for _, path := range paths {
 		fmt.Println(filepath.Base(path))
 	}
@@ -218,6 +230,9 @@ func cmdPaths() (cmds []string, err error) {
 		}
 		for _, file := range files {
 			if file.IsDir() {
+				continue
+			}
+			if len(file.Name()) > 0 && file.Name()[0] == '.' {
 				continue
 			}
 			info, err = file.Info()
