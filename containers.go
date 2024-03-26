@@ -4,17 +4,25 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/shlex"
 	"lesiw.io/ctrctl"
 )
 
 var containers []string
 var cuid, ouid, ogid int
 var dorestore bool
+var ctrctlclis = [][]string{
+	{"docker"},
+	{"podman"},
+	{"nerdctl"},
+	{"lima", "nerdctl"},
+}
 
 func containerCleanup() {
 	if runtime.GOOS == "linux" && dorestore {
@@ -26,6 +34,9 @@ func containerCleanup() {
 }
 
 func containerSetup() error {
+	if err := ctrctlSetup(); err != nil {
+		return err
+	}
 	image := os.Getenv("PBCTR")
 	if len(image) > 0 && (image[0] == '/' || image[0] == '.') {
 		var err error
@@ -76,6 +87,31 @@ func containerSetup() error {
 		}
 	}
 	return nil
+}
+
+func ctrctlSetup() error {
+	if os.Getenv("PBCTRCTL") != "" {
+		cli, err := shlex.Split(os.Getenv("PBCTRCTL"))
+		if err != nil {
+			return fmt.Errorf("could not parse PBCTRCTL: %w", err)
+		}
+		ctrctl.Cli = cli
+		return nil
+	}
+	var progs []string
+	for _, cli := range ctrctlclis {
+		progs = append(progs, cli[0])
+		path, err := exec.LookPath(cli[0])
+		if err != nil {
+			continue
+		}
+		cli[0] = path
+		ctrctl.Cli = cli
+		return nil
+	}
+	return fmt.Errorf("no container cli found. " +
+		"install one of these clis: " + strings.Join(progs, ", ") + ". " +
+		"or set PBCTRCTL to another cli.")
 }
 
 func buildContainer(path string) (image string, err error) {
