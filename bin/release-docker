@@ -22,7 +22,6 @@ then
 fi
 
 manifestcmd="docker manifest create"
-manifestcmd="$manifestcmd ${1:-}"
 manifestcmd="$manifestcmd $IMAGE_NAME:latest"
 for arch in $archlist
 do

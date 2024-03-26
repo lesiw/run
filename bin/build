@@ -1,4 +1,11 @@
 #!/bin/sh
 
-mkdir -p build
+set -e
+
+[ -z "$PBCTRID" ] && PBCTR=./etc/Dockerfile.dev exec pb "$(basename "$0")"
+
+pb clean
+pb ci
+
+mkdir -p out
 CGO_ENABLED=0 go build -o out/pb .

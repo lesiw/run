@@ -1,5 +1,6 @@
 #!/bin/sh
 
-pb lint
-pb test
+set -e
+
+pb ci
 CGO_ENABLED=0 go install ./...
