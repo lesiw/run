@@ -29,7 +29,6 @@ func fetchPb(binos, arch string) (string, error) {
 			return "", fmt.Errorf("could not find path of current executable: %s", err)
 		}
 		return path, nil
-
 	}
 	urlos, ok := unameos[binos]
 	if !ok {
@@ -44,7 +43,11 @@ func fetchPb(binos, arch string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	path := filepath.Join(cache, "pb-"+binos+"-"+arch)
+	bincache := filepath.Join(cache, "bin")
+	if err = os.MkdirAll(bincache, 0755); err != nil {
+		return "", fmt.Errorf("could not create cache directory '%s': %s", bincache, err)
+	}
+	path := filepath.Join(bincache, "pb-"+version+"-"+binos+"-"+arch)
 	if _, err := os.Stat(path); err == nil {
 		return path, nil
 	}
