@@ -16,7 +16,7 @@ import (
 	"lesiw.io/ctrctl"
 )
 
-const defaultcmd = ".pbdefault"
+const defaultcmd = ".main"
 
 var root string
 var container string
