@@ -117,7 +117,7 @@ func execCommand(argv []string) error {
 				Cmd:         attachCmd(),
 				Env:         "PBCTRID=" + container,
 				Interactive: true,
-				Tty:         true,
+				Tty:         isTty(),
 			},
 			container,
 			"pb",
