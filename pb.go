@@ -36,6 +36,9 @@ func main() {
 
 func run() (err error) {
 	version = strings.TrimSpace(versionfile)
+	if os.Getenv("PBCTRDEBUG") == "1" {
+		ctrctl.Verbose = true
+	}
 	flag.Usage = func() {
 		fmt.Fprint(flag.CommandLine.Output(), "Usage of pb:\n\n")
 		fmt.Fprint(flag.CommandLine.Output(), "    pb COMMAND [ARGS...]\n\n")
