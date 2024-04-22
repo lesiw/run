@@ -2,7 +2,7 @@
 
 set -e
 
-pb build
-pb release-docker
+run build
+run release-docker
 
 find out/ -type l -exec rm -f {} \;

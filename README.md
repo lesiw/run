@@ -1,4 +1,4 @@
-# pb: project builder
+# run: Contextual commands
 
 Run commands relative to the root of the git repository.
 
@@ -7,21 +7,21 @@ Run commands relative to the root of the git repository.
 ### curl
 
 ```sh
-curl -L lesiw.io/pb | sh
+curl -L lesiw.io/run | sh
 ```
 
 ### go install
 
 ```sh
-go install lesiw.io/pb@latest
+go install lesiw.io/run@latest
 ```
 
 ## Usage
 
 ```
-Usage of pb:
+Usage of run:
 
-    pb COMMAND [ARGS...]
+    run COMMAND [ARGS...]
 
   -V    print version
   -i    install completion scripts
@@ -34,14 +34,14 @@ Usage of pb:
 
 ## Configuration
 
-* `PBPATH`: Defaults to `./bin`. Set to `-` to disable.
+* `RUNPATH`: Defaults to `./bin`. Set to `-` to disable.
 
 ## Completion
 
 Install bash/zsh completion:
 
 ```sh
-sudo "$(which pb)" -i
+sudo "$(which run)" -i
 ```
 
 After running the command, follow the printed instructions.

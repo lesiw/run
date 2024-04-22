@@ -2,7 +2,7 @@
 
 set -e
 
-IMAGE_NAME="${IMAGE_NAME:-lesiw/pb}"
+IMAGE_NAME="${IMAGE_NAME:-lesiw/run}"
 archlist="386 amd64 arm arm64"
 for arch in $archlist
 do

@@ -3,7 +3,6 @@ package main
 import (
 	_ "embed"
 	"errors"
-	"flag"
 	"fmt"
 	"io/fs"
 	"os"
@@ -14,57 +13,63 @@ import (
 
 	"github.com/google/uuid"
 	"lesiw.io/ctrctl"
+	"lesiw.io/flag"
 )
 
 const defaultcmd = ".main"
 
-var root string
-var container string
-var pbid uuid.UUID
-var verbose = flag.Bool("v", false, "verbose")
+var (
+	errParse = errors.New("parse error")
 
-//go:embed version.txt
-var versionfile string
-var version string
+	flags     = flag.NewSet(os.Stderr, "run COMMAND [ARGS...]")
+	install   = flags.Bool("i", "install completion scripts")
+	list      = flags.Bool("l", "list all commands")
+	printroot = flags.Bool("r", "print root")
+	verbose   = flags.Bool("v", "verbose")
+	printver  = flags.Bool("V,version", "print version")
+	usermap   = flags.Strings("u",
+		"chowns files based on a given `mapping` (uid:gid::uid:gid)")
+
+	root      string
+	container string
+	runid     uuid.UUID
+
+	//go:embed version.txt
+	versionfile string
+	version     string
+)
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		if !errors.Is(err, errParse) {
+			fmt.Fprintln(os.Stderr, err)
+		}
 		os.Exit(1)
 	}
 }
 
 func run() (err error) {
 	version = strings.TrimSpace(versionfile)
-	if os.Getenv("PBCTRDEBUG") == "1" {
+	if os.Getenv("RUNCTRDEBUG") == "1" {
 		ctrctl.Verbose = true
 	}
-	flag.Usage = func() {
-		fmt.Fprint(flag.CommandLine.Output(), "Usage of pb:\n\n")
-		fmt.Fprint(flag.CommandLine.Output(), "    pb COMMAND [ARGS...]\n\n")
-		flag.PrintDefaults()
+	if err := flags.Parse(os.Args[1:]...); err != nil {
+		return errParse
 	}
-	var usermap stringlist
-	flag.Var(&usermap, "u", "chowns files based on a given `mapping` (uid:gid::uid:gid)")
-	list := flag.Bool("l", false, "list all commands")
-	printroot := flag.Bool("r", false, "print git root")
-	install := flag.Bool("i", false, "install completion scripts")
-	printversion := flag.Bool("V", false, "print version")
-	flag.Parse()
-	if *printversion {
+	if *printver {
 		fmt.Println(version)
 		return nil
 	} else if *install {
-		return installCompletion()
+		return installComp()
 	}
 
 	if err = changeToGitRoot(); err != nil {
-		return fmt.Errorf("could not find git root: %s", err)
+		return fmt.Errorf("failed to find git root: %s", err)
 	}
 	if root, err = os.Getwd(); err != nil {
-		return fmt.Errorf("could not get current working directory: %s", err)
+		return fmt.Errorf("failed to get current working directory: %s", err)
 	}
-	if pbid, err = getPBID(); err != nil {
+	if runid, err = getPbId(); err != nil {
 		return err
 	}
 	if *list {
@@ -72,14 +77,14 @@ func run() (err error) {
 	} else if *printroot {
 		fmt.Println(root)
 		return nil
-	} else if len(usermap) > 0 {
-		return chownFiles(usermap)
+	} else if len(*usermap) > 0 {
+		return chownFiles(*usermap)
 	}
 	argv := []string{defaultcmd}
-	if flag.NArg() > 0 {
-		argv = flag.Args()
+	if len(flags.Args) > 0 {
+		argv = flags.Args
 	}
-	if os.Getenv("PBCTR") != "" {
+	if os.Getenv("RUNCTR") != "" {
 		defer containerCleanup()
 		if err = containerSetup(); err != nil {
 			return err
@@ -88,26 +93,30 @@ func run() (err error) {
 	return execCommand(argv)
 }
 
-func getPBID() (uuid.UUID, error) {
-	pbidfile := filepath.Join(root, ".pbid")
-	uuidbytes, err := os.ReadFile(pbidfile)
+func getPbId() (id uuid.UUID, err error) {
+	runidfile := filepath.Join(root, ".runid")
+	var rawid []byte
+	rawid, err = os.ReadFile(runidfile)
 	var pe *fs.PathError
 	if err == nil {
-		uuidstring := strings.TrimSpace(string(uuidbytes))
-		u, err := uuid.Parse(uuidstring)
-		if err != nil {
-			return uuid.UUID{}, fmt.Errorf("could not parse project id: %s", err)
+		uuidstring := strings.TrimSpace(string(rawid))
+		if id, err = uuid.Parse(uuidstring); err != nil {
+			err = fmt.Errorf("failed to parse project id: %s", err)
+			return
 		}
-		return u, nil
+		return
 	}
 	if !errors.As(err, &pe) {
-		return uuid.UUID{}, fmt.Errorf("could not read .pbid file: %s", err)
+		err = fmt.Errorf("failed to read .runid file: %s", err)
+		return
 	}
-	newUUID := uuid.New()
-	if err = os.WriteFile(pbidfile, []byte(newUUID.String()+"\n"), 0644); err != nil {
-		return uuid.UUID{}, fmt.Errorf("could not write .pbid file: %s", err)
+	id = uuid.New()
+	err = os.WriteFile(runidfile, []byte(id.String()+"\n"), 0644)
+	if err != nil {
+		err = fmt.Errorf("failed to write .runid file: %s", err)
+		return
 	}
-	return newUUID, nil
+	return
 }
 
 func execCommand(argv []string) error {
@@ -115,28 +124,28 @@ func execCommand(argv []string) error {
 		_, err := ctrctl.ContainerExec(
 			&ctrctl.ContainerExecOpts{
 				Cmd:         attachCmd(),
-				Env:         "PBCTRID=" + container,
+				Env:         "RUNCTRID=" + container,
 				Interactive: true,
 				Tty:         isTty(),
 			},
 			container,
-			"pb",
+			"run",
 			argv...,
 		)
 		if err != nil {
-			return fmt.Errorf("containerized pb failed: %s", err)
+			return fmt.Errorf("containerized run failed: %s", err)
 		}
 		return nil
 	}
 	name := argv[0]
 	var args []string
 	if len(argv) > 1 {
-		args = flag.Args()[1:]
+		args = flags.Args[1:]
 	}
 	cmdpath, err := findExecutable(name)
 	if err != nil {
 		if name == defaultcmd {
-			fmt.Fprintln(os.Stderr, "no command specified. available commands:")
+			fmt.Fprintln(os.Stderr, "bad command. valid commands:")
 			return listCommands()
 		} else {
 			return fmt.Errorf("error running command: %s", err)
@@ -173,18 +182,18 @@ func findExecutable(name string) (string, error) {
 	oldpath := os.Getenv("PATH")
 	defer func() { _ = os.Setenv("PATH", oldpath) }()
 
-	pbPath := pbPath()
-	if pbPath != "" {
-		path := pbPath + string(filepath.ListSeparator) + os.Getenv("PATH")
+	runPath := runPath()
+	if runPath != "" {
+		path := runPath + string(filepath.ListSeparator) + os.Getenv("PATH")
 		if err := os.Setenv("PATH", path); err != nil {
-			return "", fmt.Errorf("could not set PATH: %s", err)
+			return "", fmt.Errorf("failed to set PATH: %s", err)
 		}
 	}
 	return exec.LookPath(name)
 }
 
-func pbPath() string {
-	paths := os.Getenv("PBPATH")
+func runPath() string {
+	paths := os.Getenv("RUNPATH")
 	if paths == "" {
 		paths = "./bin"
 	} else if paths == "-" {
@@ -192,14 +201,15 @@ func pbPath() string {
 	}
 	abspaths := strings.Builder{}
 	splitpaths := filepath.SplitList(paths)
+	sep := string(filepath.Separator)
 	for i, path := range splitpaths {
 		if i > 0 {
 			abspaths.WriteString(string(filepath.ListSeparator))
 		}
-		parts := strings.Split(path, string(filepath.Separator))
+		parts := strings.Split(path, sep)
 		if len(parts) > 0 && parts[0] == "." {
 			parts[0] = root
-			abspaths.WriteString(strings.Join(parts, string(filepath.Separator)))
+			abspaths.WriteString(strings.Join(parts, sep))
 		} else {
 			abspaths.WriteString(path)
 		}
@@ -223,7 +233,7 @@ func listCommands() error {
 }
 
 func cmdPaths() (cmds []string, err error) {
-	paths := pbPath()
+	paths := runPath()
 	var files []fs.DirEntry
 	var info os.FileInfo
 	for _, path := range filepath.SplitList(paths) {
@@ -250,7 +260,7 @@ func cmdPaths() (cmds []string, err error) {
 	return
 }
 
-func chownFiles(mappings stringlist) error {
+func chownFiles(mappings []string) error {
 	for _, mapping := range mappings {
 		fromstr, tostr, ok := strings.Cut(mapping, "::")
 		if !ok {
@@ -287,16 +297,5 @@ func chownFiles(mappings stringlist) error {
 			return err
 		}
 	}
-	return nil
-}
-
-type stringlist []string
-
-func (s *stringlist) String() string {
-	return "[" + strings.Join(*s, ", ") + "]"
-}
-
-func (s *stringlist) Set(v string) error {
-	*s = append(*s, v)
 	return nil
 }

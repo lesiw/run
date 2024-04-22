@@ -14,51 +14,54 @@ import (
 )
 
 //go:embed completion/completion.bash
-var bashCompletion []byte
+var bashcomp []byte
 
 //go:embed completion/completion.zsh
-var zshCompletion []byte
+var zshcomp []byte
 
-func installCompletion() error {
+func installComp() error {
 	if os.Geteuid() != 0 {
 		return errors.New("--install-completions must be run as root.")
 	}
-	for _, fn := range []func() error{installBashCompletion, installZshCompletion} {
+	for _, fn := range []func() error{installBashComp, installZshComp} {
 		if err := fn(); err != nil {
 			return err
 		}
 	}
-	fmt.Println(`BASH: Install your system's bash-completion package, then run "exec bash".`)
+	fmt.Println(`BASH: Install your system's bash-completion package,`,
+		`then run "exec bash".`)
 	fmt.Println(`ZSH: Run "rm -f ~/.zcompdump && compinit".`,
-		`If compinit fails with a "command not found" error, add`,
-		`"autoload -Uz compinit && compinit" to your ~/.zshrc, then run "exec zsh".`)
+		`(If compinit fails with a "command not found" error, add`,
+		`"autoload -Uz compinit && compinit" to your ~/.zshrc,`,
+		`then run "exec zsh".)`)
 	return nil
 }
 
-func installBashCompletion() error {
-	var installPath string
+func installBashComp() error {
+	var path string
 	switch runtime.GOOS {
 	case "darwin":
-		installPath = "/usr/local/share/bash-completion/completions/pb"
+		path = "/usr/local/share/bash-completion/completions/run"
 	default:
-		installPath = "/usr/share/bash-completion/completions/pb"
+		path = "/usr/share/bash-completion/completions/run"
 	}
-	bashChanged, err := installFile(bashCompletion, installPath)
+	changed, err := installFile(bashcomp, path)
 	if err != nil {
 		return fmt.Errorf("Error installing bash completion script: %v\n", err)
 	}
-	if bashChanged {
+	if changed {
 		fmt.Println("Bash completion script updated.")
 	}
 	return nil
 }
 
-func installZshCompletion() error {
-	zshChanged, err := installFile(zshCompletion, "/usr/local/share/zsh/site-functions/_pb")
+func installZshComp() error {
+	changed, err := installFile(zshcomp,
+		"/usr/local/share/zsh/site-functions/_run")
 	if err != nil {
 		return fmt.Errorf("Error installing zsh completion script: %v\n", err)
 	}
-	if zshChanged {
+	if changed {
 		fmt.Println("Zsh completion script updated.")
 	}
 	return nil

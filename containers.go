@@ -37,7 +37,7 @@ func containerSetup() error {
 	if err := ctrctlSetup(); err != nil {
 		return err
 	}
-	image := os.Getenv("PBCTR")
+	image := os.Getenv("RUNCTR")
 	if len(image) > 0 && (image[0] == '/' || image[0] == '.') {
 		var err error
 		if image, err = buildContainer(image); err != nil {
@@ -56,7 +56,7 @@ func containerSetup() error {
 		"cat",
 	)
 	if err != nil {
-		return fmt.Errorf("could not start container: %s", err)
+		return fmt.Errorf("failed to start container: %s", err)
 	}
 	containers = append(containers, container)
 	imageid, err := ctrctl.Inspect(
@@ -64,20 +64,20 @@ func containerSetup() error {
 		container,
 	)
 	if err != nil {
-		return fmt.Errorf("could not get image id of work container: %s", err)
+		return fmt.Errorf("failed to get image id of work container: %s", err)
 	}
 	osarch, err := ctrctl.Inspect(
 		&ctrctl.InspectOpts{Format: "{{.Os}}/{{.Architecture}}"},
 		imageid,
 	)
 	if err != nil {
-		return fmt.Errorf("could not get os/arch of work container: %s", err)
+		return fmt.Errorf("failed to get os/arch of work container: %s", err)
 	}
 	ctros, ctrarch, ok := strings.Cut(osarch, "/")
 	if !ok {
-		return fmt.Errorf("could not parse os/arch format: %s", err)
+		return fmt.Errorf("failed to parse os/arch format: %s", err)
 	}
-	if err = installPbInContainer(ctros, ctrarch); err != nil {
+	if err = installRunInContainer(ctros, ctrarch); err != nil {
 		return err
 	}
 	if runtime.GOOS == "linux" {
@@ -89,10 +89,10 @@ func containerSetup() error {
 }
 
 func ctrctlSetup() error {
-	if os.Getenv("PBCTRCTL") != "" {
-		cli, err := shlex.Split(os.Getenv("PBCTRCTL"))
+	if os.Getenv("RUNCTRCTL") != "" {
+		cli, err := shlex.Split(os.Getenv("RUNCTRCTL"))
 		if err != nil {
-			return fmt.Errorf("could not parse PBCTRCTL: %w", err)
+			return fmt.Errorf("failed to parse RUNCTRCTL: %w", err)
 		}
 		ctrctl.Cli = cli
 		return nil
@@ -110,12 +110,12 @@ func ctrctlSetup() error {
 	}
 	return fmt.Errorf("no container cli found. " +
 		"install one of these clis: " + strings.Join(progs, ", ") + ". " +
-		"or set PBCTRCTL to another cli.")
+		"or set RUNCTRCTL to another cli.")
 }
 
 func buildContainer(path string) (image string, err error) {
 	imagehash := sha1.New()
-	imagehash.Write(pbid[:])
+	imagehash.Write(runid[:])
 	imagehash.Write([]byte(path))
 	image = fmt.Sprintf("%x", imagehash.Sum(nil))
 	ctimestr, inspectErr := ctrctl.Inspect(
@@ -124,14 +124,15 @@ func buildContainer(path string) (image string, err error) {
 	)
 	mtime, err := getMtime(path)
 	if err != nil {
-		err = fmt.Errorf("could not read Containerfile '%s': %s", path, err)
+		err = fmt.Errorf("failed to read Containerfile '%s': %s", path, err)
 		return
 	}
 	if inspectErr == nil {
 		var ctime time.Time
 		ctime, err = time.Parse(time.RFC3339, ctimestr)
 		if err != nil {
-			err = fmt.Errorf("could not parse container created timestamp '%s': %s",
+			err = fmt.Errorf(
+				"failed to parse container created timestamp '%s': %s",
 				ctimestr, err)
 			return
 		}
@@ -161,7 +162,7 @@ func fixFileOwners() error {
 		container,
 	)
 	if err != nil {
-		return fmt.Errorf("could not get user id of container: %s", err)
+		return fmt.Errorf("failed to get user id of container: %s", err)
 	}
 	if user != "" {
 		cuid, err = strconv.Atoi(user)
@@ -170,24 +171,24 @@ func fixFileOwners() error {
 		}
 	}
 	if ouid, ogid, err = getOwner(".git"); err != nil {
-		return fmt.Errorf("could not get owner of .git directory: %s", err)
+		return fmt.Errorf("failed to get owner of .git directory: %s", err)
 	}
 	dorestore = true
 	return containerChown(ouid, ogid, cuid, cuid)
 }
 
-func installPbInContainer(ctros, ctrarch string) error {
-	pbbin, err := fetchPb(ctros, ctrarch)
+func installRunInContainer(ctros, ctrarch string) error {
+	runbin, err := fetchRun(ctros, ctrarch)
 	if err != nil {
 		return err
 	}
 	_, err = ctrctl.ContainerCp(
 		&ctrctl.ContainerCpOpts{FollowLink: true},
-		pbbin,
-		container+":/usr/bin/pb",
+		runbin,
+		container+":/usr/bin/run",
 	)
 	if err != nil {
-		return fmt.Errorf("could not copy pb into container: %s", err)
+		return fmt.Errorf("failed to copy run into container: %s", err)
 	}
 	return nil
 }
@@ -199,10 +200,10 @@ func containerChown(fuid, fgid, tuid, tgid int) error {
 			Volume:  root + ":/work",
 			Workdir: "/work",
 		},
-		"lesiw/pb", "-u", fmt.Sprintf("%d:%d::%d:%d", fuid, fgid, tuid, tgid),
+		"lesiw/run", "-u", fmt.Sprintf("%d:%d::%d:%d", fuid, fgid, tuid, tgid),
 	)
 	if err != nil {
-		return fmt.Errorf("could not run chown: %s", err)
+		return fmt.Errorf("failed to run chown: %s", err)
 	}
 	return nil
 }

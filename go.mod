@@ -1,8 +1,10 @@
-module lesiw.io/pb
+module lesiw.io/run
 
 go 1.22.1
 
 require lesiw.io/ctrctl v0.9.0
+
+require lesiw.io/flag v0.6.0
 
 require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510

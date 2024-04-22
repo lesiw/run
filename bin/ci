@@ -2,6 +2,6 @@
 
 set -e
 
-pb tidy
-pb lint
-pb test
+run tidy
+run lint
+run test

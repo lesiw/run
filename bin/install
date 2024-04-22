@@ -2,5 +2,5 @@
 
 set -e
 
-pb ci
+run ci
 CGO_ENABLED=0 go install ./...

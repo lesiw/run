@@ -1,9 +1,9 @@
-#compdef pb
+#compdef run
 
-_pb_tasks() {
+_run_tasks() {
     local -a tasks
     IFS=$'\n'
-    tasks=($(pb -l 2>/dev/null))
+    tasks=($(run -l 2>/dev/null))
     _describe 'tasks' tasks
 }
 
@@ -11,4 +11,4 @@ _arguments \
     '-i[Install autocomplete scripts.]' \
     '-r[Print root.]' \
     '-l[List tasks.]' \
-    '*:task:_pb_tasks'
+    '*:task:_run_tasks'
