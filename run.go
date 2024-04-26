@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -19,6 +20,8 @@ import (
 const defaultcmd = ".main"
 
 var (
+	defers deferlist
+
 	errParse = errors.New("parse error")
 
 	flags     = flag.NewSet(os.Stderr, "run COMMAND [ARGS...]")
@@ -40,6 +43,13 @@ var (
 )
 
 func main() {
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt)
+	go func() {
+		<-sig
+		defers.run()
+		os.Exit(1)
+	}()
 	if err := run(); err != nil {
 		if !errors.Is(err, errParse) {
 			fmt.Fprintln(os.Stderr, err)
@@ -49,6 +59,7 @@ func main() {
 }
 
 func run() (err error) {
+	defer defers.run()
 	version = strings.TrimSpace(versionfile)
 	if os.Getenv("RUNCTRDEBUG") == "1" {
 		ctrctl.Verbose = true
@@ -85,7 +96,7 @@ func run() (err error) {
 		argv = flags.Args
 	}
 	if os.Getenv("RUNCTR") != "" {
-		defer containerCleanup()
+		defers.add(containerCleanup)
 		if err = containerSetup(); err != nil {
 			return err
 		}
