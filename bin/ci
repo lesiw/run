@@ -3,5 +3,6 @@
 set -e
 
 run tidy
+run fmt
 run lint
 run test

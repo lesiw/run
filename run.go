@@ -61,9 +61,6 @@ func main() {
 func run() (err error) {
 	defer defers.run()
 	version = strings.TrimSpace(versionfile)
-	if os.Getenv("RUNCTRDEBUG") == "1" {
-		ctrctl.Verbose = true
-	}
 	if err := flags.Parse(os.Args[1:]...); err != nil {
 		return errParse
 	}
@@ -73,7 +70,6 @@ func run() (err error) {
 	} else if *install {
 		return installComp()
 	}
-
 	if err = changeToGitRoot(); err != nil {
 		return fmt.Errorf("failed to find git root: %s", err)
 	}
@@ -91,14 +87,24 @@ func run() (err error) {
 	} else if len(*usermap) > 0 {
 		return chownFiles(*usermap)
 	}
-	argv := []string{defaultcmd}
+	return buildArgv()
+}
+
+func buildArgv() (err error) {
+	argv := []string{}
 	if len(flags.Args) > 0 {
 		argv = flags.Args
 	}
-	if err = runInit(); err != nil {
+	if argv, err = runInit(argv); err != nil {
 		return err
 	}
-	if os.Getenv("RUNCTR") != "" {
+	if len(argv) < 1 {
+		argv = append(argv, defaultcmd)
+	}
+	if os.Getenv("RUNCTRDEBUG") == "1" {
+		ctrctl.Verbose = true
+	}
+	if os.Getenv("RUNCTRID") == "" && os.Getenv("RUNCTR") != "" {
 		defers.add(containerCleanup)
 		if err = containerSetup(); err != nil {
 			return err
