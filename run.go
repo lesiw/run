@@ -95,6 +95,9 @@ func run() (err error) {
 	if len(flags.Args) > 0 {
 		argv = flags.Args
 	}
+	if err = runInit(); err != nil {
+		return err
+	}
 	if os.Getenv("RUNCTR") != "" {
 		defers.add(containerCleanup)
 		if err = containerSetup(); err != nil {
