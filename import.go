@@ -17,6 +17,23 @@ func getPackage(url string) error {
 	return nil
 }
 
+func importPackage(url string) error {
+	path, err := packageOut(url)
+	if err != nil {
+		return err
+	}
+	bin := filepath.Join(path, "bin")
+	if _, err = os.Stat(bin); err != nil {
+		return fmt.Errorf("failed to import '%s': no bin directory", url)
+	}
+	err = os.Setenv("RUNPATH", os.Getenv("RUNPATH")+
+		string(filepath.ListSeparator)+bin)
+	if err != nil {
+		return fmt.Errorf("failed to set RUNPATH: %s", err)
+	}
+	return nil
+}
+
 func packageOut(url string) (out string, err error) {
 	if !strings.Contains(url, "@") {
 		if !strings.Contains(url, "://") {

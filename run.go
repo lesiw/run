@@ -30,6 +30,7 @@ var (
 	verbose   = flags.Bool("v", "verbose")
 	printver  = flags.Bool("V,version", "print version")
 	get       = flags.String("g", "fetch and build other project")
+	imp       = flags.String("i", "import other project into RUNPATH")
 	usermap   = flags.Strings("u",
 		"chowns files based on a given `mapping` (uid:gid::uid:gid)")
 
@@ -87,6 +88,10 @@ func run() (err error) {
 		return chownFiles(*usermap)
 	} else if *get != "" {
 		return getPackage(*get)
+	} else if *imp != "" {
+		if err = importPackage(*imp); err != nil {
+			return err
+		}
 	}
 	argv := []string{}
 	if len(flags.Args) > 0 {
@@ -130,6 +135,7 @@ func execCommand(argv []string) error {
 		} else {
 			fmt.Fprintln(os.Stderr, "bad command. available commands:")
 		}
+		// FIXME: this needs to return an error to avoid exiting 0
 		return listCommands()
 	}
 	if os.Getenv("RUNCTRID") == "" && os.Getenv("RUNCTR") != "" {
@@ -242,7 +248,7 @@ func runPath() string {
 func listCommands() error {
 	paths, err := cmdPaths()
 	if err != nil {
-		return err
+		return err // FIXME: returns cryptic error if no bin/ directory.
 	}
 	if len(paths) < 1 {
 		fmt.Fprintln(os.Stderr, "<none>")
