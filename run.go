@@ -15,9 +15,8 @@ import (
 	"github.com/google/uuid"
 	"lesiw.io/ctrctl"
 	"lesiw.io/flag"
+	"v.io/x/lib/lookpath"
 )
-
-const defaultcmd = ".main"
 
 var (
 	defers deferlist
@@ -33,9 +32,8 @@ var (
 	usermap   = flags.Strings("u",
 		"chowns files based on a given `mapping` (uid:gid::uid:gid)")
 
-	root      string
-	container string
-	runid     uuid.UUID
+	root  string
+	runid uuid.UUID
 
 	//go:embed version.txt
 	versionfile string
@@ -87,28 +85,9 @@ func run() (err error) {
 	} else if len(*usermap) > 0 {
 		return chownFiles(*usermap)
 	}
-	return buildArgv()
-}
-
-func buildArgv() (err error) {
 	argv := []string{}
 	if len(flags.Args) > 0 {
 		argv = flags.Args
-	}
-	if argv, err = runInit(argv); err != nil {
-		return err
-	}
-	if len(argv) < 1 {
-		argv = append(argv, defaultcmd)
-	}
-	if os.Getenv("RUNCTRDEBUG") == "1" {
-		ctrctl.Verbose = true
-	}
-	if os.Getenv("RUNCTRID") == "" && os.Getenv("RUNCTR") != "" {
-		defers.add(containerCleanup)
-		if err = containerSetup(); err != nil {
-			return err
-		}
 	}
 	return execCommand(argv)
 }
@@ -140,36 +119,22 @@ func getPbId() (id uuid.UUID, err error) {
 }
 
 func execCommand(argv []string) error {
-	if container != "" {
-		_, err := ctrctl.ContainerExec(
-			&ctrctl.ContainerExecOpts{
-				Cmd:         attachCmd(),
-				Env:         "RUNCTRID=" + container,
-				Interactive: true,
-				Tty:         isTty(),
-			},
-			container,
-			"run",
-			argv...,
-		)
-		if err != nil {
-			return fmt.Errorf("containerized run failed: %s", err)
-		}
-		return nil
-	}
-	name := argv[0]
-	var args []string
-	if len(argv) > 1 {
-		args = flags.Args[1:]
-	}
-	cmdpath, err := findExecutable(name)
+	e := &runEnv{envmap(), argv}
+	cmdpath, err := findExecutable(e)
 	if err != nil {
-		if name == defaultcmd {
-			fmt.Fprintln(os.Stderr, "bad command. valid commands:")
-			return listCommands()
+		if len(e.argv) < 1 {
+			fmt.Fprintln(os.Stderr, "no command given. available commands:")
 		} else {
-			return fmt.Errorf("error running command: %s", err)
+			fmt.Fprintln(os.Stderr, "bad command. available commands:")
 		}
+		return listCommands()
+	}
+	if os.Getenv("RUNCTRID") == "" && os.Getenv("RUNCTR") != "" {
+		return ctrCommand(e.argv)
+	}
+	var args []string
+	if len(e.argv) > 1 {
+		args = flags.Args[1:]
 	}
 	cmd := exec.Command(cmdpath, args...)
 	cmd.Stdin = os.Stdin
@@ -177,6 +142,32 @@ func execCommand(argv []string) error {
 	cmd.Stderr = os.Stderr
 	if err = cmd.Run(); err != nil {
 		return fmt.Errorf("error running command: %s", err)
+	}
+	return nil
+}
+
+func ctrCommand(argv []string) (err error) {
+	if os.Getenv("RUNCTRDEBUG") == "1" {
+		ctrctl.Verbose = true
+	}
+	defers.add(containerCleanup)
+	container, err := containerSetup()
+	if err != nil {
+		return err
+	}
+	_, err = ctrctl.ContainerExec(
+		&ctrctl.ContainerExecOpts{
+			Cmd:         attachCmd(),
+			Env:         "RUNCTRID=" + container,
+			Interactive: true,
+			Tty:         isTty(),
+		},
+		container,
+		"run",
+		argv...,
+	)
+	if err != nil {
+		return fmt.Errorf("containerized run failed: %s", err)
 	}
 	return nil
 }
@@ -198,18 +189,26 @@ func changeToGitRoot() error {
 	}
 }
 
-func findExecutable(name string) (string, error) {
-	oldpath := os.Getenv("PATH")
-	defer func() { _ = os.Setenv("PATH", oldpath) }()
-
-	runPath := runPath()
-	if runPath != "" {
-		path := runPath + string(filepath.ListSeparator) + os.Getenv("PATH")
-		if err := os.Setenv("PATH", path); err != nil {
-			return "", fmt.Errorf("failed to set PATH: %s", err)
+func findExecutable(e *runEnv) (path string, err error) {
+	inited := make(map[string]bool)
+	e.env["RUNPATH"] = runPath()
+loop:
+	for _, p := range filepath.SplitList(e.env["RUNPATH"]) {
+		if inited[p] {
+			continue
 		}
+		inited[p] = true
+		if err = runInit(e, filepath.Join(p, ".init.lua")); err != nil {
+			return
+		} else if len(e.argv) < 1 {
+			continue
+		} else if path, err = lookpath.Look(e.lpenv(), e.argv[0]); err == nil {
+			setenv(e.env)
+			return
+		}
+		goto loop // RUNPATH may have mutated; start over.
 	}
-	return exec.LookPath(name)
+	return "", fmt.Errorf("bad command")
 }
 
 func runPath() string {

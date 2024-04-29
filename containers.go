@@ -33,19 +33,18 @@ func containerCleanup() {
 	}
 }
 
-func containerSetup() error {
+func containerSetup() (string, error) {
 	if err := ctrctlSetup(); err != nil {
-		return err
+		return "", err
 	}
 	image := os.Getenv("RUNCTR")
 	if len(image) > 0 && (image[0] == '/' || image[0] == '.') {
 		var err error
 		if image, err = buildContainer(image); err != nil {
-			return err
+			return "", err
 		}
 	}
-	var err error
-	container, err = ctrctl.ContainerRun(
+	container, err := ctrctl.ContainerRun(
 		&ctrctl.ContainerRunOpts{
 			Detach:  true,
 			Tty:     true,
@@ -56,7 +55,7 @@ func containerSetup() error {
 		"cat",
 	)
 	if err != nil {
-		return fmt.Errorf("failed to start container: %s", err)
+		return "", fmt.Errorf("failed to start container: %s", err)
 	}
 	containers = append(containers, container)
 	imageid, err := ctrctl.Inspect(
@@ -64,28 +63,30 @@ func containerSetup() error {
 		container,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to get image id of work container: %s", err)
+		return "", fmt.Errorf("failed to get image id of work container: %s",
+			err)
 	}
 	osarch, err := ctrctl.Inspect(
 		&ctrctl.InspectOpts{Format: "{{.Os}}/{{.Architecture}}"},
 		imageid,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to get os/arch of work container: %s", err)
+		return "", fmt.Errorf("failed to get os/arch of work container: %s",
+			err)
 	}
 	ctros, ctrarch, ok := strings.Cut(osarch, "/")
 	if !ok {
-		return fmt.Errorf("failed to parse os/arch format: %s", err)
+		return "", fmt.Errorf("failed to parse os/arch format: %s", err)
 	}
-	if err = installRunInContainer(ctros, ctrarch); err != nil {
-		return err
+	if err = installRunInContainer(container, ctros, ctrarch); err != nil {
+		return "", err
 	}
 	if runtime.GOOS == "linux" {
-		if err = fixFileOwners(); err != nil {
-			return err
+		if err = fixFileOwners(container); err != nil {
+			return "", err
 		}
 	}
-	return nil
+	return container, nil
 }
 
 func ctrctlSetup() error {
@@ -156,10 +157,10 @@ func buildContainer(path string) (image string, err error) {
 	return
 }
 
-func fixFileOwners() error {
+func fixFileOwners(ctr string) error {
 	user, err := ctrctl.Inspect(
 		&ctrctl.InspectOpts{Format: "{{.Config.User}}"},
-		container,
+		ctr,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to get user id of container: %s", err)
@@ -177,7 +178,7 @@ func fixFileOwners() error {
 	return containerChown(ouid, ogid, cuid, cuid)
 }
 
-func installRunInContainer(ctros, ctrarch string) error {
+func installRunInContainer(ctr, ctros, ctrarch string) error {
 	runbin, err := fetchRun(ctros, ctrarch)
 	if err != nil {
 		return err
@@ -185,7 +186,7 @@ func installRunInContainer(ctros, ctrarch string) error {
 	_, err = ctrctl.ContainerCp(
 		&ctrctl.ContainerCpOpts{FollowLink: true},
 		runbin,
-		container+":/usr/bin/run",
+		ctr+":/usr/bin/run",
 	)
 	if err != nil {
 		return fmt.Errorf("failed to copy run into container: %s", err)
