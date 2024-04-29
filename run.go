@@ -24,11 +24,12 @@ var (
 	errParse = errors.New("parse error")
 
 	flags     = flag.NewSet(os.Stderr, "run COMMAND [ARGS...]")
-	install   = flags.Bool("i", "install completion scripts")
+	install   = flags.Bool("install-completions", "install completion scripts")
 	list      = flags.Bool("l", "list all commands")
 	printroot = flags.Bool("r", "print root")
 	verbose   = flags.Bool("v", "verbose")
 	printver  = flags.Bool("V,version", "print version")
+	get       = flags.String("g", "fetch and build other project")
 	usermap   = flags.Strings("u",
 		"chowns files based on a given `mapping` (uid:gid::uid:gid)")
 
@@ -84,6 +85,8 @@ func run() (err error) {
 		return nil
 	} else if len(*usermap) > 0 {
 		return chownFiles(*usermap)
+	} else if *get != "" {
+		return getPackage(*get)
 	}
 	argv := []string{}
 	if len(flags.Args) > 0 {

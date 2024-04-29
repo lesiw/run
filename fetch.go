@@ -40,16 +40,11 @@ func fetchRun(binos, arch string) (string, error) {
 		return "", fmt.Errorf("unrecognized container arch: %s", arch)
 	}
 	url := rundlurl + "/download/" + version + "/run-" + urlos + "-" + urlarch
-	cache, err := cacheDir()
+	cache, err := cacheDir("bin")
 	if err != nil {
 		return "", err
 	}
-	bincache := filepath.Join(cache, "bin")
-	if err = os.MkdirAll(bincache, 0755); err != nil {
-		return "", fmt.Errorf(
-			"failed to create cache directory '%s': %s", bincache, err)
-	}
-	path := filepath.Join(bincache, "run-"+version+"-"+binos+"-"+arch)
+	path := filepath.Join(cache, "run-"+version+"-"+binos+"-"+arch)
 	if _, err := os.Stat(path); err == nil {
 		return path, nil
 	}
@@ -57,17 +52,6 @@ func fetchRun(binos, arch string) (string, error) {
 		return "", err
 	}
 	return path, nil
-}
-
-func cacheDir() (cache string, err error) {
-	if cache, err = os.UserCacheDir(); err != nil {
-		return "", fmt.Errorf("failed to get user cache directory: %s", err)
-	}
-	cache = filepath.Join(cache, "run")
-	if err = os.MkdirAll(cache, 0755); err != nil {
-		return "", fmt.Errorf("failed to create cache directory: %s", err)
-	}
-	return
 }
 
 func downloadUrl(url, path string) error {

@@ -41,7 +41,7 @@ Usage of run:
 Install bash/zsh completion:
 
 ```sh
-sudo "$(which run)" -i
+sudo "$(which run)" --install-completions
 ```
 
 After running the command, follow the printed instructions.
