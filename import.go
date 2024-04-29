@@ -17,13 +17,21 @@ func getPackage(url string) error {
 	return nil
 }
 
-func packageOut(url string) (string, error) {
-	// TODO: split pkg; detect redirect
+func packageOut(url string) (out string, err error) {
+	if !strings.Contains(url, "@") {
+		if !strings.Contains(url, "://") {
+			url = "https://" + url
+		}
+		url, err = realUrl(url)
+		if err != nil {
+			return "", fmt.Errorf("failed to fetch url '%s': %w", url, err)
+		}
+	}
 	src, err := packageSrc(url)
 	if err != nil {
 		return "", err
 	}
-	out, err := packageBuild(src)
+	out, err = packageBuild(src)
 	if err != nil {
 		return "", fmt.Errorf("failed to build '%s': %w", url, err)
 	}
@@ -38,7 +46,7 @@ func packageSrc(url string) (string, error) {
 	defers.add(func() { _ = os.RemoveAll(dir) })
 	cmd := exec.Command("git", "clone", "--depth=1", url, dir)
 	if *verbose {
-		cmd.Stdout = os.Stdout
+		cmd.Stdout = os.Stderr
 		cmd.Stderr = os.Stderr
 	}
 	if err := cmd.Run(); err != nil {
