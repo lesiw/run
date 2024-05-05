@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 )
 
-func cacheDir(path string) (cache string, err error) {
+func cacheDir(path ...string) (cache string, err error) {
 	if cache, err = os.UserCacheDir(); err != nil {
 		return "", fmt.Errorf("failed to get user cache directory: %s", err)
 	}
-	cache = filepath.Join(cache, "run", path)
+	cache = filepath.Join(cache, "run", filepath.Join(path...))
 	if err = os.MkdirAll(cache, 0755); err != nil {
 		return "", fmt.Errorf("failed to create cache directory: %s", err)
 	}
