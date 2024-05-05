@@ -124,6 +124,19 @@ func packageBuild(src string) (string, error) {
 	if err = cp.Copy(out, path); err != nil {
 		return "", fmt.Errorf("failed copying output dir: %w", err)
 	}
+	bysrc, err := cacheDir("var", "pkg", "by-src")
+	if err != nil {
+		return "", err
+	}
+	relpath, err := filepath.Rel(bysrc, path)
+	if err != nil {
+		return "", fmt.Errorf(
+			"failed calculating relative path to package output: %w", err)
+	}
+	err = os.Symlink(relpath, filepath.Join(bysrc, filepath.Base(src)))
+	if err != nil {
+		return "", fmt.Errorf("failed creating by-src symlink: %w", err)
+	}
 	return path, nil
 }
 
