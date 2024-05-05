@@ -96,6 +96,19 @@ func packageSrc(url string) (string, error) {
 }
 
 func packageBuild(src string) (string, error) {
+	bysrc, err := cacheDir("var", "pkg", "by-src")
+	if err != nil {
+		return "", err
+	}
+	cachepath := filepath.Join(bysrc, filepath.Base(src))
+	if _, err := os.Lstat(cachepath); err == nil {
+		if cachepath, err := filepath.EvalSymlinks(cachepath); err != nil {
+			return "", fmt.Errorf("failed evaluating symlink: %w", err)
+		} else {
+			return cachepath, nil
+		}
+	}
+
 	run, err := os.Executable()
 	if err != nil {
 		run = "run"
@@ -124,16 +137,12 @@ func packageBuild(src string) (string, error) {
 	if err = cp.Copy(out, path); err != nil {
 		return "", fmt.Errorf("failed copying output dir: %w", err)
 	}
-	bysrc, err := cacheDir("var", "pkg", "by-src")
-	if err != nil {
-		return "", err
-	}
 	relpath, err := filepath.Rel(bysrc, path)
 	if err != nil {
 		return "", fmt.Errorf(
 			"failed calculating relative path to package output: %w", err)
 	}
-	err = os.Symlink(relpath, filepath.Join(bysrc, filepath.Base(src)))
+	err = os.Symlink(relpath, cachepath)
 	if err != nil {
 		return "", fmt.Errorf("failed creating by-src symlink: %w", err)
 	}
