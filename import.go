@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,7 +8,6 @@ import (
 	"strings"
 
 	cp "github.com/otiai10/copy"
-	"golang.org/x/mod/sumdb/dirhash"
 )
 
 func getPackage(url string) error {
@@ -125,7 +122,7 @@ func packageBuild(src string) (string, error) {
 	if _, err = os.Stat(out); err != nil {
 		return "", err
 	}
-	hash, err := hashDir(out)
+	hash, err := hashDir(out, "", hash1)
 	if err != nil {
 		return "", err
 	}
@@ -147,24 +144,4 @@ func packageBuild(src string) (string, error) {
 		return "", fmt.Errorf("failed creating by-src symlink: %w", err)
 	}
 	return path, nil
-}
-
-// hashDir hashes the contents of path.
-// The output of this function should be equivalent to:
-//
-//	sha256sum $(find . -type f | sort | cut -c 3-) | sha256sum
-func hashDir(path string) (string, error) {
-	h1, err := dirhash.HashDir(path, "", dirhash.Hash1)
-	if err != nil {
-		return "", err
-	}
-	kind, b64hash, ok := strings.Cut(h1, ":")
-	if !ok || kind != "h1" {
-		return "", fmt.Errorf("bad hash format from dirhash: %s", h1)
-	}
-	rawhash, err := base64.StdEncoding.DecodeString(b64hash)
-	if err != nil {
-		return "", fmt.Errorf("bad base64 string from dirhash: %s", b64hash)
-	}
-	return kind + "_" + hex.EncodeToString(rawhash), nil
 }
