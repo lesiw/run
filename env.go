@@ -3,6 +3,7 @@ package main
 import (
 	"maps"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -24,8 +25,19 @@ func (e *runEnv) Clone() *runEnv {
 func (e *runEnv) lpenv() map[string]string {
 	m := make(map[string]string)
 	maps.Copy(m, e.env)
-	m["PATH"] = m["RUNPATH"]
+	var path strings.Builder
+	parts := strings.Split(e.env["RUNPATH"], listsep)
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		if path.Len() > 0 {
+			path.WriteString(listsep)
+		}
+		path.WriteString(filepath.Join(part, ".run"))
+	}
 	delete(m, "RUNPATH")
+	m["PATH"] = path.String()
 	return m
 }
 

@@ -22,12 +22,11 @@ func importPackage(url string) error {
 	if err != nil {
 		return err
 	}
-	bin := filepath.Join(path, "bin")
+	bin := filepath.Join(path, ".run")
 	if _, err = os.Stat(bin); err != nil {
-		return fmt.Errorf("failed to import '%s': no bin directory", url)
+		return fmt.Errorf("failed to import '%s': no .run directory", url)
 	}
-	err = os.Setenv("RUNPATH", os.Getenv("RUNPATH")+
-		string(filepath.ListSeparator)+bin)
+	err = os.Setenv("RUNPATH", os.Getenv("RUNPATH")+listsep+path)
 	if err != nil {
 		return fmt.Errorf("failed to set RUNPATH: %s", err)
 	}

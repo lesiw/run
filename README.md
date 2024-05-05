@@ -7,7 +7,7 @@ Run commands relative to the root of the git repository.
 ### curl
 
 ```sh
-curl -L lesiw.io/run | sh
+curl lesiw.io/run | sh
 ```
 
 ### go install
@@ -34,7 +34,8 @@ Usage of run:
 
 ## Configuration
 
-* `RUNPATH`: Defaults to `./bin`. Set to `-` to disable.
+* `RUNPATH`: Defaults to `.`. Unlike `PATH`, it will search the given
+  directories' `.run` directories for executables.
 
 ## Completion
 

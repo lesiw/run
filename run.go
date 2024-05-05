@@ -18,6 +18,8 @@ import (
 	"v.io/x/lib/lookpath"
 )
 
+const listsep = string(filepath.ListSeparator)
+
 var (
 	defers deferlist
 
@@ -76,7 +78,7 @@ func run() (err error) {
 	if root, err = os.Getwd(); err != nil {
 		return fmt.Errorf("failed to get current working directory: %s", err)
 	}
-	if runid, err = getPbId(); err != nil {
+	if runid, err = getProjectId(); err != nil {
 		return err
 	}
 	if *list {
@@ -100,7 +102,10 @@ func run() (err error) {
 	return execCommand(argv)
 }
 
-func getPbId() (id uuid.UUID, err error) {
+func getProjectId() (id uuid.UUID, err error) {
+	// NOTE: .runid is in the project root rather than the .run directory
+	// to make it easy for other programs to identify the root of a run project
+	// and get its identifier - e.g. vcs host search.
 	runidfile := filepath.Join(root, ".runid")
 	var rawid []byte
 	rawid, err = os.ReadFile(runidfile)
@@ -207,7 +212,7 @@ loop:
 			continue
 		}
 		inited[p] = true
-		if err = runInit(e, filepath.Join(p, ".init.lua")); err != nil {
+		if err = runInit(e, filepath.Join(p, ".run", "init.lua")); err != nil {
 			return
 		} else if len(e.argv) < 1 {
 			continue
@@ -223,16 +228,14 @@ loop:
 func runPath() string {
 	paths := os.Getenv("RUNPATH")
 	if paths == "" {
-		paths = "./bin"
-	} else if paths == "-" {
-		return ""
+		paths = "."
 	}
 	abspaths := strings.Builder{}
 	splitpaths := filepath.SplitList(paths)
 	sep := string(filepath.Separator)
 	for i, path := range splitpaths {
 		if i > 0 {
-			abspaths.WriteString(string(filepath.ListSeparator))
+			abspaths.WriteString(listsep)
 		}
 		parts := strings.Split(path, sep)
 		if len(parts) > 0 && parts[0] == "." {
@@ -246,6 +249,10 @@ func runPath() string {
 }
 
 func listCommands() error {
+	// NOTE: This is duplicating lookpath logic
+	// and may return different results.
+	// Ideally, we should have one implementation of lookpath
+	// that takes a function that can be executed for each valid executable.
 	paths, err := cmdPaths()
 	if err != nil {
 		return err // FIXME: returns cryptic error if no bin/ directory.
@@ -265,7 +272,7 @@ func cmdPaths() (cmds []string, err error) {
 	var files []fs.DirEntry
 	var info os.FileInfo
 	for _, path := range filepath.SplitList(paths) {
-		files, err = os.ReadDir(path)
+		files, err = os.ReadDir(filepath.Join(path, ".run"))
 		if err != nil {
 			return nil, fmt.Errorf("error reading directory: %s", err)
 		}

@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -e
+
+golangci-lint run
+
+if grep -R 'filepath\.ListSeparator' -- *.go | grep -v '^run.go:const'
+then
+    >&2 echo "found filepath.ListSeparator. use listsep const instead."
+    exit 1
+fi
