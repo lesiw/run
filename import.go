@@ -93,7 +93,7 @@ func packageSrc(url string) (string, error) {
 }
 
 func packageBuild(src string) (string, error) {
-	bysrc, err := cacheDir("var", "pkg", "by-src")
+	bysrc, err := cacheDir("store", "by-src")
 	if err != nil {
 		return "", err
 	}
@@ -126,7 +126,7 @@ func packageBuild(src string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	cache, err := cacheDir("var", "pkg")
+	cache, err := cacheDir("store")
 	if err != nil {
 		return "", err
 	}
