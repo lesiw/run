@@ -1,6 +1,0 @@
-#!/bin/sh
-
-set -e
-
-PBCTRID=local pb build
-scp out/pb-darwin-arm64 macbook:~/.local/bin/pb
