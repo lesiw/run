@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	cp "github.com/otiai10/copy"
 )
 
 func getPackage(url string) error {
@@ -131,7 +131,7 @@ func packageBuild(src string) (string, error) {
 		return "", err
 	}
 	path := filepath.Join(cache, hash)
-	if err = cp.Copy(out, path); err != nil {
+	if err = storeCopy(out, path); err != nil {
 		return "", fmt.Errorf("failed copying output dir: %w", err)
 	}
 	relpath, err := filepath.Rel(bysrc, path)
@@ -144,4 +144,48 @@ func packageBuild(src string) (string, error) {
 		return "", fmt.Errorf("failed creating by-src symlink: %w", err)
 	}
 	return path, nil
+}
+
+func storeCopy(src, dst string) error {
+	copyfunc := func(srcpath string, d fs.DirEntry, _ error) error {
+		relpath, err := filepath.Rel(src, srcpath)
+		if err != nil {
+			return err
+		}
+		dstpath := filepath.Join(dst, relpath)
+		if d.IsDir() {
+			return os.Mkdir(dstpath, 0777)
+		}
+		if !d.Type().IsRegular() {
+			return fmt.Errorf("failed to copy '%s': not a regular file",
+				srcpath)
+		}
+		info, err := os.Stat(srcpath)
+		if err != nil {
+			return err
+		}
+		var exec fs.FileMode
+		if info.Mode()&0111 != 0 {
+			exec = 0111
+		}
+		srcfile, err := os.OpenFile(srcpath, os.O_RDONLY, 0)
+		if err != nil {
+			return err
+		}
+		defer srcfile.Close()
+		dstfile, err := os.OpenFile(dstpath,
+			os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666|exec)
+		if err != nil {
+			return err
+		}
+		defer dstfile.Close()
+		if _, err = io.Copy(dstfile, srcfile); err != nil {
+			return err
+		}
+		if err = os.Chmod(dstpath, 0444|exec); err != nil {
+			return err
+		}
+		return nil
+	}
+	return filepath.WalkDir(src, copyfunc)
 }
