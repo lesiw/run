@@ -36,6 +36,7 @@ func importPackage(url string) error {
 }
 
 func packageOut(url string) (out string, err error) {
+	rev := lock(url)
 	if !strings.Contains(url, "@") {
 		if !strings.Contains(url, "://") {
 			url = "https://" + url
@@ -45,7 +46,16 @@ func packageOut(url string) (out string, err error) {
 			return "", fmt.Errorf("failed to fetch url '%s': %w", url, err)
 		}
 	}
-	src, err := packageSrc(url)
+	if rev != "" {
+		cachepath, err := storeByRev(rev)
+		if err != nil {
+			return "", err
+		}
+		if cachepath != "" {
+			return cachepath, nil
+		}
+	}
+	src, rev, err := packageSrc(url, rev)
 	if err != nil {
 		return "", err
 	}
@@ -53,43 +63,63 @@ func packageOut(url string) (out string, err error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to build '%s': %w", url, err)
 	}
+	if err = setLock(url, rev); err != nil {
+		return "", fmt.Errorf("failed to update lockfile for '%s': %w",
+			url, err)
+	}
 	return out, nil
 }
 
-func packageSrc(url string) (string, error) {
+func packageSrc(url, rev string) (string, string, error) {
 	dir, err := os.MkdirTemp("", "run")
 	if err != nil {
-		return "", fmt.Errorf("failed to create temp directory: %w", err)
+		return "", rev,
+			fmt.Errorf("failed to create temp directory: %w", err)
 	}
 	defers.add(func() { _ = os.RemoveAll(dir) })
-	cmd := exec.Command("git", "clone", "--depth=1", url, dir)
+	cmd := exec.Command("git", "clone", url, dir)
 	if *verbose {
 		cmd.Stdout = os.Stderr
 		cmd.Stderr = os.Stderr
 	}
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to clone '%s': %w", url, err)
+		// TODO: if not verbose, return stderr
+		return "", rev, fmt.Errorf("failed to clone '%s': %w", url, err)
 	}
 
-	cmd = exec.Command("git", "-C", dir, "rev-parse", "HEAD")
-	buf, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("failed to get HEAD rev from '%s': %w", url, err)
+	if rev == "" {
+		cmd = exec.Command("git", "-C", dir, "rev-parse", "HEAD")
+		buf, err := cmd.Output()
+		if err != nil {
+			return "", rev,
+				fmt.Errorf("failed to get HEAD rev from '%s': %w", url, err)
+		}
+		rev = strings.Trim(string(buf), "\n")
+	} else {
+		cmd = exec.Command("git", "-C", dir, "checkout", rev)
+		if *verbose {
+			cmd.Stdout = os.Stderr
+			cmd.Stderr = os.Stderr
+		}
+		if err := cmd.Run(); err != nil {
+			// TODO: if not verbose, return stderr
+			return "", rev, fmt.Errorf(
+				"failed to checkout rev '%s' from '%s': %w", rev, url, err)
+		}
 	}
-	sha := strings.Trim(string(buf), "\n")
 
 	cache, err := cacheDir("src")
 	if err != nil {
-		return "", err
+		return "", rev, err
 	}
 
-	path := filepath.Join(cache, sha)
+	path := filepath.Join(cache, rev)
 	if _, err = os.Stat(path); err == nil {
-		return path, nil
+		return path, rev, nil
 	}
 
 	err = os.Rename(dir, path)
-	return path, err
+	return path, rev, err
 }
 
 func packageBuild(src string) (string, error) {
@@ -188,4 +218,20 @@ func storeCopy(src, dst string) error {
 		return nil
 	}
 	return filepath.WalkDir(src, copyfunc)
+}
+
+func storeByRev(rev string) (string, error) {
+	bysrc, err := cacheDir("store", "by-src")
+	if err != nil {
+		return "", err
+	}
+	cachepath := filepath.Join(bysrc, rev)
+	if _, err := os.Lstat(cachepath); err == nil {
+		if cachepath, err := filepath.EvalSymlinks(cachepath); err != nil {
+			return "", fmt.Errorf("failed evaluating symlink: %w", err)
+		} else {
+			return cachepath, nil
+		}
+	}
+	return "", nil
 }
