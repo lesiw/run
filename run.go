@@ -89,9 +89,13 @@ func run() (err error) {
 	} else if len(*usermap) > 0 {
 		return chownFiles(*usermap)
 	} else if *get != "" {
-		return getPackage(*get)
+		return getPackage(baseEnv(), *get)
 	} else if *imp != "" {
-		if err = importPackage(*imp); err != nil {
+		env := baseEnv()
+		if err = importPackage(env, *imp); err != nil {
+			return err
+		}
+		if err = env.Apply(); err != nil {
 			return err
 		}
 	}
@@ -132,8 +136,9 @@ func getProjectId() (id uuid.UUID, err error) {
 }
 
 func execCommand(argv []string) error {
-	e := &runEnv{envmap(), argv}
-	cmdpath, err := findExecutable(e)
+	e := baseEnv()
+	e.argv = append([]string{}, argv...)
+	e, cmdpath, err := findExecutable(e)
 	if err != nil {
 		if len(e.argv) < 1 {
 			fmt.Fprintln(os.Stderr, "no command given. available commands:")
@@ -203,26 +208,34 @@ func changeToGitRoot() error {
 	}
 }
 
-func findExecutable(e *runEnv) (path string, err error) {
-	inited := make(map[string]bool)
-	e.env["RUNPATH"] = runPath()
-loop:
+func findExecutable(env *runEnv) (e *runEnv, path string, err error) {
+	e = env
+	e.env["RUNPATH"] = e.path // FIXME: this is a cheat
+	envs := []*runEnv{e}
 	for _, p := range filepath.SplitList(e.env["RUNPATH"]) {
-		if inited[p] {
+		if p == "" {
+			if len(envs) < 1 {
+				err = fmt.Errorf("emptied env stack in RUNPATH")
+				return
+			}
+			envs = envs[:len(envs)-1]
 			continue
 		}
-		inited[p] = true
-		if err = runInit(e, filepath.Join(p, ".run", "init.lua")); err != nil {
+		e = e.Clone()
+		envs = append(envs, e)
+		delete(e.env, "RUNPATH")
+		if err = e.Init(); err != nil {
 			return
-		} else if len(e.argv) < 1 {
+		}
+		if len(e.argv) < 1 {
 			continue
 		} else if path, err = lookpath.Look(e.lpenv(), e.argv[0]); err == nil {
 			setenv(e.env)
 			return
 		}
-		goto loop // RUNPATH may have mutated; start over.
 	}
-	return "", fmt.Errorf("bad command")
+	err = fmt.Errorf("bad command")
+	return
 }
 
 func runPath() string {
@@ -255,7 +268,7 @@ func listCommands() error {
 	// that takes a function that can be executed for each valid executable.
 	paths, err := cmdPaths()
 	if err != nil {
-		return err // FIXME: returns cryptic error if no bin/ directory.
+		return err // FIXME: returns cryptic error if no .run/ directory.
 	}
 	if len(paths) < 1 {
 		fmt.Fprintln(os.Stderr, "<none>")

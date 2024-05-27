@@ -9,61 +9,45 @@ import (
 	"strings"
 )
 
-func lock(url string) string {
-	f, err := os.Open(filepath.Join(".run", ".runlock"))
+func (env *runEnv) LoadLocks() error {
+	f, err := os.Open(filepath.Join(env.path, ".run", ".runlock"))
 	if err != nil {
-		return ""
+		return fmt.Errorf("failed to open lock file: %w", err)
 	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		if u, rev, _ := strings.Cut(scanner.Text(), " "); u == url {
-			return rev
+	for n := 1; scanner.Scan(); n++ {
+		line := scanner.Text()
+		url, rev, ok := strings.Cut(line, " ")
+		if !ok {
+			return fmt.Errorf("bad lock (line %d): '%s'", n, line)
 		}
+		env.locks[url] = rev
 	}
-	return ""
+	return nil
 }
 
-func setLock(url, rev string) error {
-	if err := os.MkdirAll(".run", 0755); err != nil {
+func (env *runEnv) SetLock(url, rev string) {
+	if env.root == nil {
+		env.locks[url] = rev
+	} else {
+		env.root.locks[url] = rev
+	}
+}
+
+func (env *runEnv) WriteLocks() error {
+	if err := os.MkdirAll(filepath.Join(env.path, ".run"), 0755); err != nil {
 		return fmt.Errorf("failed to create .run directory: %w", err)
 	}
-	line := fmt.Sprintf("%s %s", url, rev)
 
-	runlock := filepath.Join(".run", ".runlock")
-	if _, err := os.Stat(runlock); err != nil {
-		if !os.IsNotExist(err) {
-			return fmt.Errorf("failed to stat .runlock: %w", err)
-		}
-		if err = os.WriteFile(runlock, []byte(line+"\n"), 0644); err != nil {
-			return fmt.Errorf("failed to write .runlock: %w", err)
-		}
-		return nil
-	}
-
-	f, err := os.Open(runlock)
-	if err != nil {
-		return fmt.Errorf("failed to read .runlock: %w", err)
-	}
-	defer func() {
-		if f != nil {
-			f.Close()
-		}
-	}()
 	var lines []string
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		l := scanner.Text()
-		if u, _, _ := strings.Cut(l, " "); u != url {
-			lines = append(lines, l)
-		}
+	for url, rev := range env.locks {
+		lines = append(lines, fmt.Sprintf("%s %s", url, rev))
 	}
-	lines = append(lines, line)
-	f.Close()
-	f = nil
-
 	sort.Strings(lines)
-	err = os.WriteFile(runlock, []byte(strings.Join(lines, "\n")+"\n"), 0644)
+
+	runlock := filepath.Join(env.path, ".run", ".runlock")
+	err := os.WriteFile(runlock, []byte(strings.Join(lines, "\n")+"\n"), 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write .runlock: %w", err)
 	}

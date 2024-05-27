@@ -8,15 +8,30 @@ import (
 )
 
 type runEnv struct {
-	env  map[string]string
-	argv []string
+	env   map[string]string
+	argv  []string
+	locks map[string]string
+
+	root *runEnv
+	path string
 }
 
 func (e *runEnv) Clone() *runEnv {
 	o := &runEnv{}
-	copy(o.argv, e.argv)
+	o.path = e.path
+	o.argv = append([]string{}, e.argv...)
+	o.env = make(map[string]string)
 	for k, v := range e.env {
 		o.env[k] = v
+	}
+	o.locks = make(map[string]string)
+	for k, v := range e.locks {
+		o.locks[k] = v
+	}
+	if e.root == nil {
+		o.root = e
+	} else {
+		o.root = e.root
 	}
 	return o
 }
@@ -41,6 +56,11 @@ func (e *runEnv) lpenv() map[string]string {
 	return m
 }
 
+func (env *runEnv) Apply() error {
+	setenv(env.env)
+	return env.WriteLocks()
+}
+
 func envmap() map[string]string {
 	m := make(map[string]string)
 	for _, env := range os.Environ() {
@@ -53,5 +73,13 @@ func envmap() map[string]string {
 func setenv(env map[string]string) {
 	for k, v := range env {
 		os.Setenv(k, v)
+	}
+}
+
+func baseEnv() *runEnv {
+	return &runEnv{
+		env:   envmap(),
+		locks: make(map[string]string),
+		path:  root,
 	}
 }

@@ -10,8 +10,8 @@ import (
 	"strings"
 )
 
-func getPackage(url string) error {
-	path, err := packageOut(url)
+func getPackage(env *runEnv, url string) error {
+	path, err := packageOut(env, url)
 	if err != nil {
 		return err
 	}
@@ -19,8 +19,8 @@ func getPackage(url string) error {
 	return nil
 }
 
-func importPackage(url string) error {
-	path, err := packageOut(url)
+func importPackage(env *runEnv, url string) error {
+	path, err := packageOut(env, url)
 	if err != nil {
 		return err
 	}
@@ -28,15 +28,12 @@ func importPackage(url string) error {
 	if _, err = os.Stat(bin); err != nil {
 		return fmt.Errorf("failed to import '%s': no .run directory", url)
 	}
-	err = os.Setenv("RUNPATH", os.Getenv("RUNPATH")+listsep+path)
-	if err != nil {
-		return fmt.Errorf("failed to set RUNPATH: %s", err)
-	}
+	env.env["RUNPATH"] = env.env["RUNPATH"] + listsep + path + listsep
 	return nil
 }
 
-func packageOut(url string) (out string, err error) {
-	rev := lock(url)
+func packageOut(env *runEnv, url string) (out string, err error) {
+	rev := env.locks[url]
 	if !strings.Contains(url, "@") {
 		if !strings.Contains(url, "://") {
 			url = "https://" + url
@@ -63,10 +60,7 @@ func packageOut(url string) (out string, err error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to build '%s': %w", url, err)
 	}
-	if err = setLock(url, rev); err != nil {
-		return "", fmt.Errorf("failed to update lockfile for '%s': %w",
-			url, err)
-	}
+	env.SetLock(url, rev)
 	return out, nil
 }
 
