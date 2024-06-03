@@ -8,6 +8,8 @@ import (
 )
 
 type runEnv struct {
+	inited bool
+
 	env   map[string]string
 	argv  []string
 	locks map[string]string

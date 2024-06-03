@@ -9,6 +9,11 @@ import (
 )
 
 func (env *runEnv) Init() error {
+	if env.inited {
+		return nil
+	}
+	env.inited = true
+
 	if err := env.LoadLocks(); err != nil {
 		return err
 	}

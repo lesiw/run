@@ -93,10 +93,17 @@ func run() (err error) {
 		return nil
 	} else if len(*usermap) > 0 {
 		return chownFiles(*usermap)
-	} else if *get != "" {
-		return getPackage(baseEnv(), *get)
+	}
+	env := baseEnv()
+	if len(flags.Args) > 0 {
+		env.argv = flags.Args
+	}
+	if err = env.Init(); err != nil {
+		return err
+	}
+	if *get != "" {
+		return getPackage(env, *get)
 	} else if *imp != "" {
-		env := baseEnv()
 		if err = importPackage(env, *imp); err != nil {
 			return err
 		}
@@ -104,11 +111,7 @@ func run() (err error) {
 			return err
 		}
 	}
-	argv := []string{}
-	if len(flags.Args) > 0 {
-		argv = flags.Args
-	}
-	return execCommand(argv)
+	return execCommand(env.argv)
 }
 
 func getProjectId() (id uuid.UUID, err error) {
