@@ -47,25 +47,33 @@ func (s *RpcSrv) GetPackage(req *GetPkgReq, path *string) (err error) {
 	return err
 }
 
-func getPackage(env *runEnv, url string) error {
+func pkgPath(env *runEnv, url string) (string, error) {
 	req := &GetPkgReq{
 		ctx: strings.Split(env.env["RUNPKGS"], ":"),
 		url: url,
 	}
 	client, err := rpc.Dial("tcp", env.env["RUNRPC"])
 	if err != nil {
-		return fmt.Errorf("failed to connect to rpc server: %w", err)
+		return "", fmt.Errorf("failed to connect to rpc server: %w", err)
 	}
 	var path string
 	if err := client.Call("RpcSrv.GetPackage", req, &path); err != nil {
-		return err
+		return "", err
 	}
-	fmt.Println(path)
+	return path, nil
+}
+
+func getPackage(env *runEnv, url string) error {
+	if path, err := pkgPath(env, url); err != nil {
+		return err
+	} else {
+		fmt.Println(path)
+	}
 	return nil
 }
 
 func importPackage(env *runEnv, url string) error {
-	path, err := packageOut(env, url)
+	path, err := pkgPath(env, url)
 	if err != nil {
 		return err
 	}
