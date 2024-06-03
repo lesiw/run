@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,7 +11,14 @@ import (
 )
 
 func (env *runEnv) LoadLocks() error {
-	f, err := os.Open(filepath.Join(env.path, ".run", ".runlock"))
+	lockfile := filepath.Join(env.path, ".run", ".runlock")
+	_, err := os.Stat(lockfile)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("failed to stat '%s': %w", lockfile, err)
+	}
+	f, err := os.Open(lockfile)
 	if err != nil {
 		return fmt.Errorf("failed to open lock file: %w", err)
 	}

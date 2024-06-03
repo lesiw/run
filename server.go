@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -214,6 +215,13 @@ func packageBuild(src string) (string, error) {
 }
 
 func storeCopy(src, dst string) error {
+	_, err := os.Stat(dst)
+	if err != nil {
+		return nil // Nothing to do.
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
 	copyfunc := func(srcpath string, d fs.DirEntry, _ error) error {
 		relpath, err := filepath.Rel(src, srcpath)
 		if err != nil {

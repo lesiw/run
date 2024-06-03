@@ -23,7 +23,8 @@ const listsep = string(filepath.ListSeparator)
 var (
 	defers deferlist
 
-	errParse = errors.New("parse error")
+	errParse  = errors.New("parse error")
+	errBadCmd = errors.New("bad command")
 
 	flags     = flag.NewSet(os.Stderr, "run COMMAND [ARGS...]")
 	install   = flags.Bool("install-completions", "install completion scripts")
@@ -143,7 +144,7 @@ func execCommand(argv []string) error {
 	e := baseEnv()
 	e.argv = append([]string{}, argv...)
 	cmdpath, err := findExecutable(e)
-	if err != nil {
+	if err == errBadCmd {
 		if len(e.argv) < 1 {
 			fmt.Fprintln(os.Stderr, "no command given. available commands:")
 		} else {
@@ -151,6 +152,8 @@ func execCommand(argv []string) error {
 		}
 		// FIXME: this needs to return an error to avoid exiting 0
 		return listCommands()
+	} else if err != nil {
+		return err
 	}
 	if os.Getenv("RUNCTRID") == "" && os.Getenv("RUNCTR") != "" {
 		return ctrCommand(e.argv)
@@ -244,7 +247,7 @@ func findExecutable(e *runEnv) (path string, err error) {
 			return
 		}
 	}
-	err = fmt.Errorf("bad command")
+	err = errBadCmd
 	return
 }
 
