@@ -9,7 +9,6 @@ import (
 )
 
 func (env *runEnv) Init() error {
-	env.env["RUNPATH"] = env.path
 	if err := env.LoadLocks(); err != nil {
 		return err
 	}

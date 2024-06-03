@@ -14,6 +14,7 @@ type runEnv struct {
 
 	root *runEnv
 	path string
+	id   string
 }
 
 func (e *runEnv) Clone() *runEnv {
@@ -41,6 +42,7 @@ func (e *runEnv) lpenv() map[string]string {
 	m := make(map[string]string)
 	maps.Copy(m, e.env)
 	var path strings.Builder
+	path.WriteString(filepath.Join(e.path, ".run"))
 	parts := strings.Split(e.env["RUNPATH"], listsep)
 	for _, part := range parts {
 		if part == "" {
@@ -54,6 +56,27 @@ func (e *runEnv) lpenv() map[string]string {
 	delete(m, "RUNPATH")
 	m["PATH"] = path.String()
 	return m
+}
+
+// Id returns the unique package identifier in the run store.
+func (e *runEnv) Id() string {
+	if e.id != "" {
+		return e.id
+	}
+	store, err := cacheDir("store")
+	if err != nil {
+		return ""
+	}
+	abs, err := filepath.Abs(e.path)
+	if err != nil {
+		return ""
+	}
+	if strings.HasPrefix(abs, store) {
+		e.id = filepath.Base(abs)
+		return e.id
+	} else {
+		return ""
+	}
 }
 
 func (env *runEnv) Apply() error {

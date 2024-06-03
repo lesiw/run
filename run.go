@@ -60,6 +60,7 @@ func main() {
 	}
 }
 
+// nolint:gocyclo
 func run() (err error) {
 	defer defers.run()
 	version = strings.TrimSpace(versionfile)
@@ -79,6 +80,9 @@ func run() (err error) {
 		return fmt.Errorf("failed to get current working directory: %s", err)
 	}
 	if runid, err = getProjectId(); err != nil {
+		return err
+	}
+	if err := errIf(os.Getenv("RUNRPC") == "", startRpcServer); err != nil {
 		return err
 	}
 	if *list {
@@ -138,7 +142,7 @@ func getProjectId() (id uuid.UUID, err error) {
 func execCommand(argv []string) error {
 	e := baseEnv()
 	e.argv = append([]string{}, argv...)
-	e, cmdpath, err := findExecutable(e)
+	cmdpath, err := findExecutable(e)
 	if err != nil {
 		if len(e.argv) < 1 {
 			fmt.Fprintln(os.Stderr, "no command given. available commands:")
@@ -176,8 +180,11 @@ func ctrCommand(argv []string) (err error) {
 	}
 	_, err = ctrctl.ContainerExec(
 		&ctrctl.ContainerExecOpts{
-			Cmd:         attachCmd(),
-			Env:         "RUNCTRID=" + container,
+			Cmd: attachCmd(),
+			Env: []string{
+				"RUNCTRID=" + container,
+				"RUNRPC=" + os.Getenv("RUNRPC"),
+			},
 			Interactive: true,
 			Tty:         isTty(),
 		},
@@ -208,24 +215,27 @@ func changeToGitRoot() error {
 	}
 }
 
-func findExecutable(env *runEnv) (e *runEnv, path string, err error) {
-	e = env
-	e.env["RUNPATH"] = e.path // FIXME: this is a cheat
-	envs := []*runEnv{e}
-	for _, p := range filepath.SplitList(e.env["RUNPATH"]) {
-		if p == "" {
-			if len(envs) < 1 {
-				err = fmt.Errorf("emptied env stack in RUNPATH")
-				return
-			}
-			envs = envs[:len(envs)-1]
-			continue
-		}
-		e = e.Clone()
-		envs = append(envs, e)
-		delete(e.env, "RUNPATH")
+func findExecutable(e *runEnv) (path string, err error) {
+	queue := []*runEnv{e}
+	for len(queue) > 0 {
+		e = queue[0]
+		queue = queue[1:]
 		if err = e.Init(); err != nil {
 			return
+		}
+		for _, path := range strings.Split(e.env["RUNPATH"], ":") {
+			if path == "" {
+				continue
+			}
+			e2 := e.Clone()
+			delete(e.env, "RUNPATH")
+			e2.path = path
+			if e.Id() != "" && e2.env["RUNPKGS"] != "" {
+				e2.env["RUNPKGS"] = e2.env["RUNPKGS"] + ":" + e.Id()
+			} else if e.Id() != "" {
+				e2.env["RUNPKGS"] = e.Id()
+			}
+			queue = append(queue, e2)
 		}
 		if len(e.argv) < 1 {
 			continue

@@ -48,7 +48,7 @@ func containerSetup() (string, error) {
 		&ctrctl.ContainerRunOpts{
 			Detach:  true,
 			Tty:     true,
-			Volume:  root + ":/work",
+			Volume:  []string{root + ":/work"},
 			Workdir: "/work",
 		},
 		image,
@@ -146,7 +146,7 @@ func buildContainer(path string) (image string, err error) {
 			Cmd:     captureCmdUnlessVerbose(),
 			File:    path,
 			NoCache: true,
-			Tag:     image,
+			Tag:     []string{image},
 		},
 		".",
 	)
@@ -198,7 +198,7 @@ func containerChown(fuid, fgid, tuid, tgid int) error {
 	_, err := ctrctl.ContainerRun(
 		&ctrctl.ContainerRunOpts{
 			Rm:      true,
-			Volume:  root + ":/work",
+			Volume:  []string{root + ":/work"},
 			Workdir: "/work",
 		},
 		"lesiw/run", "-u", fmt.Sprintf("%d:%d::%d:%d", fuid, fgid, tuid, tgid),

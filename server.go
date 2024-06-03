@@ -4,15 +4,59 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net"
+	"net/rpc"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
-func getPackage(env *runEnv, url string) error {
-	path, err := packageOut(env, url)
+func startRpcServer() error {
+	conn, err := net.Listen("tcp4", ":")
 	if err != nil {
+		return fmt.Errorf("failed to listen on tcp port: %w", err)
+	}
+	var srv RpcSrv
+	if err := rpc.Register(&srv); err != nil {
+		return fmt.Errorf("failed to register rpc server: %w", err)
+	}
+	go rpc.Accept(conn)
+	os.Setenv("RUNRPC", conn.Addr().String())
+	return nil
+}
+
+type RpcSrv struct{}
+
+type GetPkgReq struct {
+	ctx []string
+	url string
+}
+
+func (s *RpcSrv) GetPackage(req *GetPkgReq, path *string) (err error) {
+	env := baseEnv()
+	for _, pkg := range req.ctx {
+		if env.path, err = cacheDir("store", pkg); err != nil {
+			return fmt.Errorf("failed to find package '%s': %w", pkg, err)
+		} else if err := env.Init(); err != nil {
+			return fmt.Errorf("failed to init package '%s': %w", pkg, err)
+		}
+	}
+	*path, err = packageOut(env, req.url)
+	return err
+}
+
+func getPackage(env *runEnv, url string) error {
+	req := &GetPkgReq{
+		ctx: strings.Split(env.env["RUNPKGS"], ":"),
+		url: url,
+	}
+	client, err := rpc.Dial("tcp", env.env["RUNRPC"])
+	if err != nil {
+		return fmt.Errorf("failed to connect to rpc server: %w", err)
+	}
+	var path string
+	if err := client.Call("RpcSrv.GetPackage", req, &path); err != nil {
 		return err
 	}
 	fmt.Println(path)
@@ -67,8 +111,7 @@ func packageOut(env *runEnv, url string) (out string, err error) {
 func packageSrc(url, rev string) (string, string, error) {
 	dir, err := os.MkdirTemp("", "run")
 	if err != nil {
-		return "", rev,
-			fmt.Errorf("failed to create temp directory: %w", err)
+		return "", rev, fmt.Errorf("failed to create temp directory: %w", err)
 	}
 	defers.add(func() { _ = os.RemoveAll(dir) })
 	cmd := exec.Command("git", "clone", url, dir)
