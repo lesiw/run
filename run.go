@@ -234,7 +234,7 @@ func findExecutable(e *runEnv) (path string, err error) {
 				continue
 			}
 			e2 := e.Clone()
-			delete(e.env, "RUNPATH")
+			delete(e2.env, "RUNPATH")
 			e2.path = path
 			if e.Id() != "" && e2.env["RUNPKGS"] != "" {
 				e2.env["RUNPKGS"] = e2.env["RUNPKGS"] + ":" + e.Id()
